@@ -11,53 +11,6 @@
 
 namespace crl::unitree::commons {
 
-        // Forward declaration
-        class LocomotionController;
-        class DoNothingController;
-
-        /**
-         * Tracking controller wrapper for unitree robots.
-         */
-        template <typename ControlAlgorithm = DoNothingController>
-        class ControllerNode : public BaseNode {
-            static_assert(std::is_convertible<ControlAlgorithm*, crl::unitree::commons::LocomotionController*>::value,
-                          "ControlAlgorithm must inherit crl::unitree::commons::LocomotionController as public");
-
-            public:
-            ControllerNode(const UnitreeRobotModel& model, const std::shared_ptr<UnitreeLeggedRobotData>& data, const std::string& nodeName="controller")
-            : BaseNode(model, data, nodeName) {
-                // control algorithm
-                controller_ = std::make_shared<ControlAlgorithm>(model_, data_);
-            }
-
-            ~ControllerNode() override = default;
-
-            protected:
-            /**
-             * One iteration-control logic implementation. This function is called by timer Callback.
-             * Derived classes should implement this function.
-             */
-            virtual void controlCallbackImpl() {
-                controller_->computeAndApplyControlSignals(timeStepSize_);
-            };
-
-            private:
-            void timerCallbackImpl() override {
-                auto start = this->now();
-
-                // call control callback
-                controlCallbackImpl();
-
-                // populate execution time (for profiling)
-                auto profileInfo = data_->getProfilingInfo();
-                profileInfo.controllerExecutionTime = (this->now() - start).seconds();
-                data_->setProfilingInfo(profileInfo);
-            }
-
-            protected:
-            std::shared_ptr<ControlAlgorithm> controller_ = nullptr;
-        };
-
         /**
          * Abstract class for legged locomotion controllers.
          */
@@ -123,6 +76,46 @@ namespace crl::unitree::commons {
             void populateData() override {
                 // Do nothing
             }
+        };
+
+        /**
+         * Tracking controller wrapper for unitree robots.
+         */
+        template <typename ControlAlgorithm = DoNothingController>
+        class ControllerNode : public BaseNode {
+            static_assert(std::is_convertible<ControlAlgorithm*, crl::unitree::commons::LocomotionController*>::value,
+                          "ControlAlgorithm must inherit crl::unitree::commons::LocomotionController as public");
+
+            public:
+            ControllerNode(const UnitreeRobotModel& model, const std::shared_ptr<UnitreeLeggedRobotData>& data, const std::string& nodeName="controller")
+            : BaseNode(model, data, nodeName), controller_(model, data) {}
+
+            ~ControllerNode() override = default;
+
+            protected:
+            /**
+             * One iteration-control logic implementation. This function is called by timer Callback.
+             * Derived classes should implement this function.
+             */
+            virtual void controlCallbackImpl() {
+                controller_.computeAndApplyControlSignals(timeStepSize_);
+            };
+
+            private:
+            void timerCallbackImpl() override {
+                auto start = this->now();
+
+                // call control callback
+                controlCallbackImpl();
+
+                // populate execution time (for profiling)
+                auto profileInfo = data_->getProfilingInfo();
+                profileInfo.controllerExecutionTime = (this->now() - start).seconds();
+                data_->setProfilingInfo(profileInfo);
+            }
+
+            protected:
+            ControlAlgorithm controller_;
         };
 }  // namespace crl::unitree::commons
 
