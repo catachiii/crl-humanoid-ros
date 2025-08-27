@@ -70,7 +70,7 @@ namespace crl::unitree::simulator {
          * @param damping Damping coefficient for the elastic band (default: 50.0 Ns/m)
          * @param targetHeight Target height for the robot's pelvis (default: current height)
          */
-        void setElasticBandSupport(bool enable, double stiffness = 500.0, double damping = 50.0, double targetHeight = 1.5) {
+        void setElasticBandSupport(bool enable, double stiffness = 500.0, double damping = 100.0, double targetHeight = 1.45) {
             std::lock_guard<std::mutex> lock(mujocoMutex_);
 
             elasticBandEnabled_ = enable;
@@ -745,10 +745,10 @@ namespace crl::unitree::simulator {
         std::vector<size_t> dataToMujocoMapping_; // Maps canonical index to MuJoCo XML index
 
         // Elastic band support for hanging the robot
-        bool elasticBandEnabled_ = false;
+        bool elasticBandEnabled_ = true;
         double elasticBandStiffness_ = 500.0;  // N/m
         double elasticBandDamping_ = 100.0;     // Ns/m
-        double elasticBandTargetHeight_ = 1.5; // m
+        double elasticBandTargetHeight_ = 1.45; // m
 
         // Elastic band service
         rclcpp::Service<crl_humanoid_msgs::srv::ElasticBand>::SharedPtr elasticBandService_;

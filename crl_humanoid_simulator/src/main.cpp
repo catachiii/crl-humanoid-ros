@@ -14,31 +14,6 @@
 crl_fsm_states(States, ESTOP, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
 
-// Simple concrete implementation of LocomotionController that does nothing
-class DoNothingController : public crl::unitree::commons::LocomotionController {
-public:
-    DoNothingController(const crl::unitree::commons::UnitreeRobotModel& robot,
-                       const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data)
-        : LocomotionController(std::make_shared<crl::unitree::commons::UnitreeRobotModel>(robot), data) {}
-
-protected:
-    void prepareForControlStep(double /* dt */) override {
-        // Do nothing
-    }
-
-    void computeControlSignals(double /* dt */) override {
-        // Do nothing
-    }
-
-    void applyControlSignals(double /* dt */) override {
-        // Do nothing
-    }
-
-    void populateData() override {
-        // Do nothing
-    }
-};
-
 int main(int argc, char** argv) {
     // Default robot model
     std::string modelName = "G1";
@@ -60,7 +35,7 @@ int main(int argc, char** argv) {
     auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
         [&]() { return std::make_shared<crl::unitree::commons::StarterNode>(crl::unitree::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
     auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
-        [&]() { return std::make_shared<crl::unitree::commons::ControllerNode<DoNothingController>>(model, data); });
+        [&]() { return std::make_shared<crl::unitree::commons::ControllerNode<>>(model, data); });
 
     auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3);
     constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);

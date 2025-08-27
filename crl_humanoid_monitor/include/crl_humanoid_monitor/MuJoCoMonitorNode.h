@@ -233,7 +233,7 @@ namespace crl::unitree::monitor {
                 request->enable = elasticBandEnabled_;
                 request->stiffness = 500.0;  // Default values
                 request->damping = 100.0;
-                request->target_height = 1.5; // Use current height
+                request->target_height = 1.45; // Use current height
 
                 // Send async request but don't wait for response to avoid blocking
                 auto future = elasticBandServiceClient_->async_send_request(request);
@@ -649,7 +649,7 @@ namespace crl::unitree::monitor {
         rclcpp::Client<crl_humanoid_msgs::srv::ElasticBand>::SharedPtr elasticBandServiceClient_ = nullptr;
 
         // Elastic band state
-        bool elasticBandEnabled_ = false;
+        bool elasticBandEnabled_ = true;
         rclcpp::Service<crl_humanoid_msgs::srv::Ping>::SharedPtr pingService_ = nullptr;
 
         // MuJoCo objects

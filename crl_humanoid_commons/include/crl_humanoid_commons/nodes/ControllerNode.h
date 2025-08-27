@@ -13,11 +13,12 @@ namespace crl::unitree::commons {
 
         // Forward declaration
         class LocomotionController;
+        class DoNothingController;
 
         /**
          * Tracking controller wrapper for unitree robots.
          */
-        template <typename ControlAlgorithm>
+        template <typename ControlAlgorithm = DoNothingController>
         class ControllerNode : public BaseNode {
             static_assert(std::is_convertible<ControlAlgorithm*, crl::unitree::commons::LocomotionController*>::value,
                           "ControlAlgorithm must inherit crl::unitree::commons::LocomotionController as public");
@@ -94,6 +95,34 @@ namespace crl::unitree::commons {
             virtual void computeControlSignals(double dt) = 0;
             virtual void applyControlSignals(double dt) = 0;
             virtual void populateData() = 0;
+        };
+
+        /**
+         * Simple concrete implementation of LocomotionController that does nothing.
+         * Useful as a default implementation or for testing purposes.
+         */
+        class DoNothingController : public LocomotionController {
+            public:
+            DoNothingController(const UnitreeRobotModel& robot,
+                               const std::shared_ptr<UnitreeLeggedRobotData>& data)
+                : LocomotionController(std::make_shared<UnitreeRobotModel>(robot), data) {}
+
+            protected:
+            void prepareForControlStep(double /* dt */) override {
+                // Do nothing
+            }
+
+            void computeControlSignals(double /* dt */) override {
+                // Do nothing
+            }
+
+            void applyControlSignals(double /* dt */) override {
+                // Do nothing
+            }
+
+            void populateData() override {
+                // Do nothing
+            }
         };
 }  // namespace crl::unitree::commons
 

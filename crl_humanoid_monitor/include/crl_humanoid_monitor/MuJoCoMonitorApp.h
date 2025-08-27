@@ -735,7 +735,7 @@ namespace crl::unitree::monitor {
         bool processIsRunning_ = true;
 
         // Camera control
-        bool cameraFollowEnabled_ = false;
+        bool cameraFollowEnabled_ = true;
 
         // ROS2
         std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
