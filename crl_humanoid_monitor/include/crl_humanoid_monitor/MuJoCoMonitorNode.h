@@ -15,6 +15,7 @@
 #include "crl_humanoid_msgs/msg/remote.hpp"
 #include "crl_humanoid_msgs/srv/ping.hpp"
 #include "crl_humanoid_msgs/srv/restart.hpp"
+#include "crl_humanoid_msgs/srv/elastic_band.hpp"
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/RobotData.h"
@@ -68,6 +69,7 @@ namespace crl::unitree::monitor {
 
             // Initialize ROS2 clients
             restartServiceClient_ = this->create_client<crl_humanoid_msgs::srv::Restart>("restart");
+            elasticBandServiceClient_ = this->create_client<crl_humanoid_msgs::srv::ElasticBand>("elastic_band");
 
             // Initialize MuJoCo
             initializeMuJoCo();
@@ -212,7 +214,52 @@ namespace crl::unitree::monitor {
             } catch (...) {
                 RCLCPP_ERROR(this->get_logger(), "Unknown exception in restart()");
             }
-        }        /**
+        }
+
+        /**
+         * Toggle the elastic band support for the robot in simulation.
+         */
+        void toggleElasticBand() {
+            try {
+                if (!elasticBandServiceClient_ || !elasticBandServiceClient_->service_is_ready()) {
+                    RCLCPP_WARN(this->get_logger(), "Elastic band service not available");
+                    return;
+                }
+
+                // Toggle the state
+                elasticBandEnabled_ = !elasticBandEnabled_;
+
+                auto request = std::make_shared<crl_humanoid_msgs::srv::ElasticBand::Request>();
+                request->enable = elasticBandEnabled_;
+                request->stiffness = 500.0;  // Default values
+                request->damping = 100.0;
+                request->target_height = 1.5; // Use current height
+
+                // Send async request but don't wait for response to avoid blocking
+                auto future = elasticBandServiceClient_->async_send_request(request);
+
+                RCLCPP_INFO(this->get_logger(), "Elastic band %s command sent",
+                           elasticBandEnabled_ ? "ENABLE" : "DISABLE");
+
+            } catch (const std::exception& e) {
+                RCLCPP_ERROR(this->get_logger(), "Exception in toggleElasticBand(): %s", e.what());
+                // Revert the state on error
+                elasticBandEnabled_ = !elasticBandEnabled_;
+            } catch (...) {
+                RCLCPP_ERROR(this->get_logger(), "Unknown exception in toggleElasticBand()");
+                // Revert the state on error
+                elasticBandEnabled_ = !elasticBandEnabled_;
+            }
+        }
+
+        /**
+         * Get the current elastic band state.
+         */
+        bool isElasticBandEnabled() const {
+            return elasticBandEnabled_;
+        }
+
+        /**
          * Initialize the OpenGL rendering context (call after OpenGL context is current).
          */
         void initializeRenderingContext() {
@@ -253,6 +300,27 @@ namespace crl::unitree::monitor {
          */
         mjvCamera& getCamera() {
             return camera_;
+        }
+
+        /**
+         * Get the robot's current base position.
+         */
+        std::array<double, 3> getRobotBasePosition() {
+            std::array<double, 3> position = {0.0, 0.0, 0.8}; // Default fallback
+
+            try {
+                if (data_) {
+                    auto state = data_->getLeggedRobotState();
+                    position[0] = state.basePosition.x;
+                    position[1] = state.basePosition.y;
+                    position[2] = state.basePosition.z;
+                }
+            } catch (const std::exception& e) {
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Failed to get robot base position: %s", e.what());
+            }
+
+            return position;
         }
 
         /**
@@ -576,7 +644,12 @@ namespace crl::unitree::monitor {
         rclcpp::Publisher<crl_humanoid_msgs::msg::Remote>::SharedPtr remotePublisher_ = nullptr;
 
         // Service communication
+        // Service clients
         rclcpp::Client<crl_humanoid_msgs::srv::Restart>::SharedPtr restartServiceClient_ = nullptr;
+        rclcpp::Client<crl_humanoid_msgs::srv::ElasticBand>::SharedPtr elasticBandServiceClient_ = nullptr;
+
+        // Elastic band state
+        bool elasticBandEnabled_ = false;
         rclcpp::Service<crl_humanoid_msgs::srv::Ping>::SharedPtr pingService_ = nullptr;
 
         // MuJoCo objects

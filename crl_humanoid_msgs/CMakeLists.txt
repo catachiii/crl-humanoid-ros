@@ -11,7 +11,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # -----------------------------------------------------------------------------
-# ros 
+# ros
 # -----------------------------------------------------------------------------
 
 find_package(ament_cmake REQUIRED)
@@ -24,8 +24,8 @@ find_package(trajectory_msgs REQUIRED)
 # code
 # -----------------------------------------------------------------------------
 
-# messages 
-set(msg_files 
+# messages
+set(msg_files
         "msg/Sensor.msg"
         "msg/State.msg"
         "msg/Control.msg"
@@ -41,14 +41,15 @@ set(srv_files
         "srv/Model.srv"
         "srv/Ping.srv"
         "srv/Restart.srv"
+        "srv/ElasticBand.srv"
 )
 
 # interface
-rosidl_generate_interfaces(${PROJECT_NAME} 
+rosidl_generate_interfaces(${PROJECT_NAME}
         ${msg_files}
         ${srv_files}
-        DEPENDENCIES 
-        sensor_msgs 
+        DEPENDENCIES
+        sensor_msgs
         geometry_msgs
         trajectory_msgs
 )

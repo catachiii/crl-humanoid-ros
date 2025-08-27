@@ -112,6 +112,8 @@ namespace crl::unitree::monitor {
                         runnerNode_->update();
                         // Update current FSM state
                         updateCurrentState();
+                        // Update camera follow if enabled
+                        updateCameraFollow();
                     } catch (const std::exception& e) {
                         RCLCPP_ERROR(rclcpp::get_logger("monitor_app"), "Monitor update error: %s", e.what());
                         // Continue running but log the error
@@ -227,6 +229,18 @@ namespace crl::unitree::monitor {
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "F key pressed - Toggle FSM overlay");
                         // Toggle FSM overlay
                         showFsmOverlay_ = !showFsmOverlay_;
+                        break;
+                    case GLFW_KEY_E:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "E key pressed - Toggle Elastic Band");
+                        // Toggle elastic band support
+                        if (runnerNode_) {
+                            runnerNode_->toggleElasticBand();
+                        }
+                        break;
+                    case GLFW_KEY_T:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "T key pressed - Toggle camera follow");
+                        // Toggle camera follow mode
+                        toggleCameraFollow();
                         break;
                     case GLFW_KEY_UP:
                         // Navigate FSM states up
@@ -376,6 +390,35 @@ namespace crl::unitree::monitor {
             }
         }
 
+        void toggleCameraFollow() {
+            cameraFollowEnabled_ = !cameraFollowEnabled_;
+        }
+
+        void updateCameraFollow() {
+            if (!cameraFollowEnabled_ || !runnerNode_) return;
+
+            try {
+                // Get current robot position
+                auto robotPosition = runnerNode_->getRobotBasePosition();
+                auto& camera = runnerNode_->getCamera();
+
+                // Update camera lookat point to follow robot
+                // Keep the viewing angles (azimuth, elevation, distance) unchanged
+                camera.lookat[0] = robotPosition[0];
+                camera.lookat[1] = robotPosition[1];
+                camera.lookat[2] = robotPosition[2];
+
+            } catch (const std::exception& e) {
+                // Use a static counter for throttling instead of rclcpp clock
+                static auto last_warning = std::chrono::steady_clock::now();
+                auto now = std::chrono::steady_clock::now();
+                if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_warning).count() > 1000) {
+                    RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Failed to update camera follow: %s", e.what());
+                    last_warning = now;
+                }
+            }
+        }
+
         void connectToRobot() {
             if (!runnerNode_) {
                 try {
@@ -386,6 +429,9 @@ namespace crl::unitree::monitor {
                             try {
                                 runnerNode_->initializeRenderingContext();
                                 executor_->add_node(runnerNode_);
+
+                                // Set to PLAY mode when connecting/reconnecting
+                                processIsRunning_ = true;
                                 RCLCPP_INFO(rclcpp::get_logger("MuJoCoMonitorApp"), "Connected to robot: %s", to_monitor_.c_str());
                             } catch (const std::exception& e) {
                                 runnerNode_.reset();
@@ -426,8 +472,8 @@ namespace crl::unitree::monitor {
             glColor4f(0.0f, 0.0f, 0.0f, 0.7f); // Semi-transparent black
             glVertex2f(10, 10);
             glVertex2f(380, 10);
-            glVertex2f(380, 350);
-            glVertex2f(10, 350);
+            glVertex2f(380, 400); // Increased height to accommodate elastic band and camera follow info
+            glVertex2f(10, 400);
             glEnd();
 
             // Draw connection status indicator
@@ -485,25 +531,38 @@ namespace crl::unitree::monitor {
                              20.0f / width, 1.0f - 170.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "ESC - Exit", &context,
+                    // Show elastic band status and control
+                    bool elasticBandEnabled = runnerNode_ ? runnerNode_->isElasticBandEnabled() : false;
+                    std::string elasticText = "E - Elastic Band: " + std::string(elasticBandEnabled ? "ON" : "OFF");
+                    mjr_text(mjFONT_NORMAL, elasticText.c_str(), &context,
                              20.0f / width, 1.0f - 195.0f / height,
+                             elasticBandEnabled ? 0.0f : 0.8f, elasticBandEnabled ? 1.0f : 0.8f, 0.8f);
+
+                    // Show camera follow status and control
+                    std::string followText = "T - Camera Follow: " + std::string(cameraFollowEnabled_ ? "ON" : "OFF");
+                    mjr_text(mjFONT_NORMAL, followText.c_str(), &context,
+                             20.0f / width, 1.0f - 220.0f / height,
+                             cameraFollowEnabled_ ? 0.0f : 0.8f, cameraFollowEnabled_ ? 1.0f : 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "ESC - Exit", &context,
+                             20.0f / width, 1.0f - 245.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // Mouse controls section
                     mjr_text(mjFONT_NORMAL, "MOUSE CONTROLS:", &context,
-                             20.0f / width, 1.0f - 230.0f / height,
+                             20.0f / width, 1.0f - 280.0f / height,
                              1.0f, 1.0f, 1.0f);
 
                     mjr_text(mjFONT_NORMAL, "Left Mouse - Rotate Camera", &context,
-                             20.0f / width, 1.0f - 255.0f / height,
+                             20.0f / width, 1.0f - 305.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     mjr_text(mjFONT_NORMAL, "Middle Mouse - Pan Camera", &context,
-                             20.0f / width, 1.0f - 280.0f / height,
+                             20.0f / width, 1.0f - 330.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     mjr_text(mjFONT_NORMAL, "Scroll Wheel - Zoom", &context,
-                             20.0f / width, 1.0f - 305.0f / height,
+                             20.0f / width, 1.0f - 355.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // FSM overlay
@@ -556,7 +615,7 @@ namespace crl::unitree::monitor {
                     std::array<States, N> states;
                     runnerNode_->getCurrentStates(states);
                     if (!states.empty()) {
-                        States oldState = currentState_;
+                        [[maybe_unused]] States oldState = currentState_;
                         currentState_ = states[0];
 
                         updateAvailableStates(); // Update available transitions
@@ -674,6 +733,9 @@ namespace crl::unitree::monitor {
         GLFWwindow* window_ = nullptr;
         bool showInfo_ = true;
         bool processIsRunning_ = true;
+
+        // Camera control
+        bool cameraFollowEnabled_ = false;
 
         // ROS2
         std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;

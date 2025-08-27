@@ -1,0 +1,8 @@
+# Service to control the elastic band support for the robot in simulation
+bool enable          # Enable or disable the elastic band
+float64 stiffness    # Stiffness of the elastic band in N/m (default: 500.0)
+float64 damping      # Damping coefficient in Ns/m (default: 50.0)
+float64 target_height # Target height for the robot's pelvis in meters (default: -1.0 for current height)
+---
+bool success         # True if the command was successfully applied
+string message       # Status message

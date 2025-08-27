@@ -9,6 +9,9 @@
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
 
+// ROS2 service messages
+#include "crl_humanoid_msgs/srv/elastic_band.hpp"
+
 // MuJoCo includes
 #include <mujoco/mujoco.h>
 
@@ -20,6 +23,7 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <algorithm>
 
 namespace crl::unitree::simulator {
 
@@ -40,6 +44,12 @@ namespace crl::unitree::simulator {
             simulationParamDesc.read_only = true;
             this->template declare_parameter<std::string>("robot_xml_file", "scene_crl.xml", simulationParamDesc);
 
+            // Setup elastic band service
+            elasticBandService_ = this->template create_service<crl_humanoid_msgs::srv::ElasticBand>(
+                "elastic_band",
+                std::bind(&SimNode::elasticBandServiceCallback, this, std::placeholders::_1, std::placeholders::_2)
+            );
+
             // Initialize MuJoCo
             initializeMuJoCo();
 
@@ -48,6 +58,33 @@ namespace crl::unitree::simulator {
 
             // Set default pose after mappings are established
             setDefaultPose();
+        }
+
+        /**
+         * @brief Enable or disable the elastic rubber band support for the robot.
+         * This creates a virtual elastic force that supports the robot's weight,
+         * useful for testing walking gaits without the robot falling.
+         *
+         * @param enable True to enable the elastic band, false to disable
+         * @param stiffness Stiffness of the elastic band (default: 500.0 N/m)
+         * @param damping Damping coefficient for the elastic band (default: 50.0 Ns/m)
+         * @param targetHeight Target height for the robot's pelvis (default: current height)
+         */
+        void setElasticBandSupport(bool enable, double stiffness = 500.0, double damping = 50.0, double targetHeight = 1.5) {
+            std::lock_guard<std::mutex> lock(mujocoMutex_);
+
+            elasticBandEnabled_ = enable;
+            elasticBandStiffness_ = stiffness;
+            elasticBandDamping_ = damping;
+            elasticBandTargetHeight_ = targetHeight;
+        }
+
+        /**
+         * @brief Get the current state of the elastic band support
+         * @return True if elastic band is enabled, false otherwise
+         */
+        bool isElasticBandEnabled() const {
+            return elasticBandEnabled_;
         }
 
         ~SimNode() {
@@ -60,7 +97,7 @@ namespace crl::unitree::simulator {
         }
 
     protected:
-        void resetRobot(const crl::unitree::commons::UnitreeRobotModel& model) override {
+        void resetRobot(const crl::unitree::commons::UnitreeRobotModel& [[maybe_unused]] model) override {
             std::lock_guard<std::mutex> lock(mujocoMutex_);
             if (mujocoData_ && mujocoModel_) {
                 mj_resetData(mujocoModel_, mujocoData_);
@@ -131,6 +168,9 @@ namespace crl::unitree::simulator {
 
             // Step the simulation
             mj_step(mujocoModel_, mujocoData_);
+
+            // Apply elastic band support force if enabled
+            applyElasticBandForce();
 
             // Get IMU data from base body (pelvis)
             crl::V3D accelerometer = crl::V3D(0, 0, 0);
@@ -353,6 +393,93 @@ namespace crl::unitree::simulator {
 
             // Set simulation parameters
             mujocoModel_->opt.timestep = this->timeStepSize_;
+        }
+
+        void applyElasticBandForce() {
+            // Always clear all external forces first to prevent accumulation
+            if (!mujocoData_ || !mujocoModel_) return;
+
+            // Clear all external forces
+            for (int i = 0; i < mujocoModel_->nbody * 6; ++i) {
+                mujocoData_->xfrc_applied[i] = 0.0;
+            }
+
+            // If elastic band is disabled, just return (forces are already cleared)
+            if (!elasticBandEnabled_) return;
+
+            // Find the torso_link body
+            int baseBodyId = mj_name2id(mujocoModel_, mjOBJ_BODY, "torso_link");
+            if (baseBodyId < 0) {
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                                    "Could not find torso_link body for elastic band support");
+                return;
+            }
+
+            // Get current torso_link position and velocity
+            double currentHeight = mujocoData_->xpos[3*baseBodyId + 2]; // Z position
+
+            // Get global linear velocity of torso_link body
+            // Use MuJoCo's mj_objectVelocity to get global frame velocity
+            mjtNum vel[6]; // [linear_vel_x, linear_vel_y, linear_vel_z, angular_vel_x, angular_vel_y, angular_vel_z]
+            mj_objectVelocity(mujocoModel_, mujocoData_, mjOBJ_BODY, baseBodyId, vel, 0);
+
+            // Extract velocity components (global frame)
+            double currentVelocityX = vel[0]; // X component of linear velocity
+            double currentVelocityY = vel[1]; // Y component of linear velocity
+            double currentVelocityZ = vel[2]; // Z component of linear velocity
+            double currentAngularVelX = vel[3]; // X component of angular velocity
+            double currentAngularVelY = vel[4]; // Y component of angular velocity
+            double currentAngularVelZ = vel[5]; // Z component of angular velocity
+
+            // Calculate elastic force: F = -k * (x - x0) - c * v
+            // Spring force: pulls robot towards target height
+            // Damping force: opposes velocity (if falling, creates upward force)
+            double elasticForceZ = -elasticBandStiffness_ * (currentHeight - elasticBandTargetHeight_) - elasticBandDamping_ * currentVelocityZ;
+
+            // Add damping forces for X and Y linear velocities to stabilize horizontal motion
+            double dampingForceX = -elasticBandDamping_ * 0.01 * currentVelocityX; // Reduced damping for horizontal
+            double dampingForceY = -elasticBandDamping_ * 0.01 * currentVelocityY; // Reduced damping for horizontal
+
+            // Add damping torques for angular velocities to stabilize orientation
+            double dampingTorqueX = -elasticBandDamping_ * 0.01 * currentAngularVelX; // Reduced damping for rotation
+            double dampingTorqueY = -elasticBandDamping_ * 0.01 * currentAngularVelY; // Reduced damping for rotation
+            double dampingTorqueZ = -elasticBandDamping_ * 0.01 * currentAngularVelZ; // Reduced damping for rotation
+
+            // Apply forces and torques to the torso_link body
+            // xfrc_applied stores external forces and torques applied to bodies
+            // Format: [fx, fy, fz, tx, ty, tz] for each body
+            mujocoData_->xfrc_applied[6*baseBodyId+0] = dampingForceX;   // Apply force in X direction
+            mujocoData_->xfrc_applied[6*baseBodyId+1] = dampingForceY;   // Apply force in Y direction
+            mujocoData_->xfrc_applied[6*baseBodyId+2] = elasticForceZ;   // Apply force in Z direction
+            mujocoData_->xfrc_applied[6*baseBodyId+3] = dampingTorqueX;  // Apply torque around X axis
+            mujocoData_->xfrc_applied[6*baseBodyId+4] = dampingTorqueY;  // Apply torque around Y axis
+            mujocoData_->xfrc_applied[6*baseBodyId+5] = dampingTorqueZ;  // Apply torque around Z axis
+        }
+
+        void elasticBandServiceCallback(
+            const std::shared_ptr<crl_humanoid_msgs::srv::ElasticBand::Request> request,
+            std::shared_ptr<crl_humanoid_msgs::srv::ElasticBand::Response> response) {
+
+            try {
+                setElasticBandSupport(request->enable, request->stiffness, request->damping, request->target_height);
+
+                response->success = true;
+                if (request->enable) {
+                    response->message = "Elastic band support enabled with stiffness=" +
+                                      std::to_string(request->stiffness) + " N/m, damping=" +
+                                      std::to_string(request->damping) + " Ns/m, target_height=" +
+                                      std::to_string(elasticBandTargetHeight_) + " m";
+                } else {
+                    response->message = "Elastic band support disabled";
+                }
+
+                RCLCPP_INFO(this->get_logger(), "Elastic band service call: %s", response->message.c_str());
+
+            } catch (const std::exception& e) {
+                response->success = false;
+                response->message = "Failed to set elastic band: " + std::string(e.what());
+                RCLCPP_ERROR(this->get_logger(), "Elastic band service error: %s", e.what());
+            }
         }
 
         void setDefaultPose() {
@@ -616,6 +743,15 @@ namespace crl::unitree::simulator {
         std::vector<std::string> jointNames_; // Canonical order (policy order)
         std::vector<size_t> mujocoToDataMapping_; // Maps MuJoCo XML index to canonical index
         std::vector<size_t> dataToMujocoMapping_; // Maps canonical index to MuJoCo XML index
+
+        // Elastic band support for hanging the robot
+        bool elasticBandEnabled_ = false;
+        double elasticBandStiffness_ = 500.0;  // N/m
+        double elasticBandDamping_ = 100.0;     // Ns/m
+        double elasticBandTargetHeight_ = 1.5; // m
+
+        // Elastic band service
+        rclcpp::Service<crl_humanoid_msgs::srv::ElasticBand>::SharedPtr elasticBandService_;
     };
 
 }  // namespace crl::unitree::simulator

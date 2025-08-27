@@ -9,13 +9,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# data folder path
-set(
-        CRL_HUMANOID_SIMULATOR_DATA_FOLDER
-        "\"${CMAKE_CURRENT_LIST_DIR}/data\""
-        CACHE STRING ""
-)
-
 # -----------------------------------------------------------------------------
 # ros dependencies
 # -----------------------------------------------------------------------------
@@ -40,9 +33,6 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
 # config
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME}/)
 
-# data (robot models)
-install(DIRECTORY data DESTINATION share/${PROJECT_NAME}/)
-
 # -----------------------------------------------------------------------------
 # code
 # -----------------------------------------------------------------------------
@@ -63,11 +53,6 @@ add_executable(sim src/main.cpp)
 target_include_directories(sim PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${MUJOCO_INCLUDE_DIRS}
-)
-
-# Compile definitions
-target_compile_definitions(sim PRIVATE
-    "CRL_HUMANOID_SIMULATOR_DATA_FOLDER=${CRL_HUMANOID_SIMULATOR_DATA_FOLDER}"
 )
 
 # Link libraries

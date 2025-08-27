@@ -6,13 +6,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# data folder path (same as simulator)
-set(
-        CRL_HUMANOID_SIMULATOR_DATA_FOLDER
-        "\"${CMAKE_CURRENT_LIST_DIR}/../crl_humanoid_simulator/data\""
-        CACHE STRING ""
-)
-
 # -----------------------------------------------------------------------------
 # dependencies
 # -----------------------------------------------------------------------------
@@ -41,10 +34,6 @@ add_executable(monitor src/main.cpp)
 target_include_directories(monitor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${MUJOCO_INCLUDE_DIRS}
-)
-
-target_compile_definitions(monitor PRIVATE
-    "CRL_HUMANOID_SIMULATOR_DATA_FOLDER=${CRL_HUMANOID_SIMULATOR_DATA_FOLDER}"
 )
 
 # Link libraries
