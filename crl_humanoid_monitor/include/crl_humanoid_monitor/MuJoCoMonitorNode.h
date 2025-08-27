@@ -309,7 +309,7 @@ namespace crl::unitree::monitor {
          */
         void initializeMuJoCo() {
             // Load the same model as the simulator
-            std::string xmlPath = std::string(CRL_HUMANOID_SIMULATOR_DATA_FOLDER) + "/robots/g1_description/scene_crl.xml";
+            std::string xmlPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/g1_description/scene_crl.xml";
 
             char error[1000];
             mujocoModel_ = mj_loadXML(xmlPath.c_str(), nullptr, error, sizeof(error));
