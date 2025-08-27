@@ -1,0 +1,406 @@
+RB
+	name base
+	mass 5.205080
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.065719 0.074389 0.016948 0.000036 0.000461 0.000237
+	mesh robots/go1/meshes/trunk.obj
+	meshColor 0.300000 0.300000 0.300000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.001987 0.000501 -0.022293
+	mesh robots/go1/meshes/depthCamera.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation -0.500000 0.500000 -0.500000 0.500000 0.010513 -0.043099 0.229907
+	mesh robots/go1/meshes/depthCamera.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation -0.000000 0.707107 0.000000 0.707107 0.010513 0.017201 0.256207
+	mesh robots/go1/meshes/depthCamera.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation -0.000000 0.991445 -0.130526 0.000000 0.080013 -0.017099 -0.088293
+	mesh robots/go1/meshes/depthCamera.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation -0.500000 0.500000 -0.500000 0.500000 0.010513 -0.043149 -0.104793
+	mesh robots/go1/meshes/depthCamera.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation -0.130526 0.000000 -0.000000 0.991445 -0.083987 -0.017099 -0.063293
+	mesh robots/go1/meshes/ultraSound.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.001987 -0.008299 0.252407
+	mesh robots/go1/meshes/ultraSound.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.991445 0.000000 -0.000000 -0.130526 0.080613 0.009181 -0.075793
+	mesh robots/go1/meshes/ultraSound.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.000000 0.130526 -0.991445 -0.000000 -0.084587 0.009181 -0.075793
+	collisionBox -0.001987 0.000501 -0.022293 0.500000 -0.500000 -0.500000 -0.500000 0.376200 0.093500 0.114000
+	collisionBox 0.010513 -0.043099 0.229907 0.000000 0.707107 -0.707107 0.000000 0.001000 0.001000 0.001000
+	collisionBox 0.010513 0.017201 0.256207 0.500000 0.500000 -0.500000 0.500000 0.001000 0.001000 0.001000
+	collisionBox 0.080013 -0.017099 -0.088293 0.701057 0.701057 -0.092296 -0.092296 0.001000 0.001000 0.001000
+	collisionBox 0.010513 -0.043149 -0.104793 0.000000 0.707107 -0.707107 0.000000 0.001000 0.001000 0.001000
+	collisionBox -0.083987 -0.017099 -0.063293 -0.092296 0.092296 -0.701057 0.701057 0.001000 0.001000 0.001000
+	collisionBox -0.068577 -0.005669 -0.038213 0.500000 -0.500000 -0.500000 -0.500000 0.001000 0.001000 0.001000
+	collisionBox -0.001987 -0.008299 0.252407 0.500000 -0.500000 -0.500000 -0.500000 0.001000 0.001000 0.001000
+	collisionBox 0.080613 0.009181 -0.075793 0.701057 -0.701057 0.092296 -0.092296 0.001000 0.001000 0.001000
+	collisionBox -0.084587 0.009181 -0.075793 0.092296 0.092296 -0.701057 -0.701057 0.001000 0.001000 0.001000
+/End_RB
+
+
+RB
+	name FL_hip
+	mass 0.591000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.000636 0.000458 0.000374 -0.000001 0.000037 -0.000001
+	mesh robots/go1/meshes/hip.obj
+	meshColor 0.500000 0.500000 0.500000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 0.000740 -0.000006 0.005410
+	collisionCylinder 0.000740 -0.000006 0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.046000 0.040000
+	collisionCylinder 0.080740 -0.000006 0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.041000 0.032000
+/End_RB
+
+
+RB
+	name FR_hip
+	mass 0.591000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.000636 0.000458 0.000374 0.000001 -0.000037 -0.000001
+	mesh robots/go1/meshes/hip.obj
+	meshColor 0.500000 0.500000 0.500000
+	meshTransformation -0.000000 0.707107 0.000000 0.707107 -0.000740 -0.000006 0.005410
+	collisionCylinder -0.000740 -0.000006 0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.046000 0.040000
+	collisionCylinder -0.080740 -0.000006 0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.041000 0.032000
+/End_RB
+
+
+RB
+	name RL_hip
+	mass 0.591000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.000636 0.000458 0.000374 -0.000001 -0.000037 0.000001
+	mesh robots/go1/meshes/hip.obj
+	meshColor 0.500000 0.500000 0.500000
+	meshTransformation -0.000000 0.707107 0.000000 -0.707107 0.000740 -0.000006 -0.005410
+	collisionCylinder 0.000740 -0.000006 -0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.046000 0.040000
+	collisionCylinder 0.080740 -0.000006 -0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.041000 0.032000
+/End_RB
+
+
+RB
+	name RR_hip
+	mass 0.591000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.000636 0.000458 0.000374 0.000001 0.000037 0.000001
+	mesh robots/go1/meshes/hip.obj
+	meshColor 0.500000 0.500000 0.500000
+	meshTransformation -0.707107 -0.000000 -0.707107 0.000000 -0.000740 -0.000006 -0.005410
+	collisionCylinder -0.000740 -0.000006 -0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.046000 0.040000
+	collisionCylinder -0.080740 -0.000006 -0.005410 0.707107 -0.000000 -0.707107 -0.000000 0.041000 0.032000
+/End_RB
+
+
+RB
+	name FL_thigh
+	mass 0.920000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.005596 0.001072 0.005852 0.000021 0.000002 0.000328
+	mesh robots/go1/meshes/thigh.obj
+	meshColor 0.700000 0.700000 0.700000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 0.018947 0.032736 0.003468
+	collisionBox 0.018947 -0.073764 0.003468 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.024500 0.034000
+/End_RB
+
+
+RB
+	name FR_thigh
+	mass 0.920000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.005596 0.001072 0.005852 -0.000021 -0.000002 0.000328
+	mesh robots/go1/meshes/thigh_mirror.obj
+	meshColor 0.700000 0.700000 0.700000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.018947 0.032736 0.003468
+	collisionBox -0.018947 -0.073764 0.003468 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.024500 0.034000
+/End_RB
+
+
+RB
+	name RL_thigh
+	mass 0.920000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.005596 0.001072 0.005852 0.000021 0.000002 0.000328
+	mesh robots/go1/meshes/thigh.obj
+	meshColor 0.700000 0.700000 0.700000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 0.018947 0.032736 0.003468
+	collisionBox 0.018947 -0.073764 0.003468 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.024500 0.034000
+/End_RB
+
+
+RB
+	name RR_thigh
+	mass 0.920000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.005596 0.001072 0.005852 -0.000021 -0.000002 0.000328
+	mesh robots/go1/meshes/thigh_mirror.obj
+	meshColor 0.700000 0.700000 0.700000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.018947 0.032736 0.003468
+	collisionBox -0.018947 -0.073764 0.003468 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.024500 0.034000
+/End_RB
+
+
+RB
+	name FL_calf
+	mass 0.191000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.003306 0.000042 0.003288 -0.000029 0.000001 -0.000129
+	mesh robots/go1/meshes/calf.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.000896 0.150771 -0.004311
+	collisionBox -0.000896 0.044271 -0.004311 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.016000 0.016000
+	collisionSphere -0.000896 -0.062229 -0.004311 0.020000
+	endEffector -0.000896 -0.062229 -0.004311 0.020000
+/End_RB
+
+
+RB
+	name FR_calf
+	mass 0.191000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.003306 0.000042 0.003288 -0.000029 0.000001 -0.000129
+	mesh robots/go1/meshes/calf.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.000896 0.150771 -0.004311
+	collisionBox -0.000896 0.044271 -0.004311 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.016000 0.016000
+	collisionSphere -0.000896 -0.062229 -0.004311 0.020000
+	endEffector -0.000896 -0.062229 -0.004311 0.020000
+/End_RB
+
+
+RB
+	name RL_calf
+	mass 0.191000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.003306 0.000042 0.003288 -0.000029 0.000001 -0.000129
+	mesh robots/go1/meshes/calf.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.000896 0.150771 -0.004311
+	collisionBox -0.000896 0.044271 -0.004311 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.016000 0.016000
+	collisionSphere -0.000896 -0.062229 -0.004311 0.020000
+	endEffector -0.000896 -0.062229 -0.004311 0.020000
+/End_RB
+
+
+RB
+	name RR_calf
+	mass 0.191000
+	frictionCoefficient 0.800000
+	restitutionCoefficient 0.000000
+	moi 0.003306 0.000042 0.003288 -0.000029 0.000001 -0.000129
+	mesh robots/go1/meshes/calf.obj
+	meshColor 0.900000 0.900000 0.900000
+	meshTransformation 0.707107 0.000000 -0.707107 0.000000 -0.000896 0.150771 -0.004311
+	collisionBox -0.000896 0.044271 -0.004311 0.707107 -0.000000 -0.000000 -0.707107 0.213000 0.016000 0.016000
+	collisionSphere -0.000896 -0.062229 -0.004311 0.020000
+	endEffector -0.000896 -0.062229 -0.004311 0.020000
+/End_RB
+
+
+	RBJoint
+		jointAxis 0.000000 0.000000 1.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -1.047198 1.047198
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FL_hip_joint
+		parent base
+		child FL_hip
+		jointCPos 0.000740 -0.000006 0.005410
+		jointPPos 0.044763 0.000501 0.165807
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 0.000000 0.000000 1.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -1.047198 1.047198
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FR_hip_joint
+		parent base
+		child FR_hip
+		jointCPos -0.000740 -0.000006 0.005410
+		jointPPos -0.048737 0.000501 0.165807
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 0.000000 0.000000 1.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -1.047198 1.047198
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RL_hip_joint
+		parent base
+		child RL_hip
+		jointCPos 0.000740 -0.000006 -0.005410
+		jointPPos 0.044763 0.000501 -0.210393
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 0.000000 0.000000 1.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -1.047198 1.047198
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RR_hip_joint
+		parent base
+		child RR_hip
+		jointCPos -0.000740 -0.000006 -0.005410
+		jointPPos -0.048737 0.000501 -0.210393
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -0.663225 2.967060
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FL_thigh_joint
+		parent FL_hip
+		child FL_thigh
+		jointCPos 0.018947 0.032736 0.003468
+		jointPPos 0.080740 -0.000006 0.005410
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -0.663225 2.967060
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FR_thigh_joint
+		parent FR_hip
+		child FR_thigh
+		jointCPos -0.018947 0.032736 0.003468
+		jointPPos -0.080740 -0.000006 0.005410
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -0.663225 2.967060
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RL_thigh_joint
+		parent RL_hip
+		child RL_thigh
+		jointCPos 0.018947 0.032736 0.003468
+		jointPPos 0.080740 -0.000006 -0.005410
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -0.663225 2.967060
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RR_thigh_joint
+		parent RR_hip
+		child RR_thigh
+		jointCPos -0.018947 0.032736 0.003468
+		jointPPos -0.080740 -0.000006 -0.005410
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -2.722714 -0.837758
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FL_calf_joint
+		parent FL_thigh
+		child FL_calf
+		jointCPos -0.000896 0.150771 -0.004311
+		jointPPos 0.018947 -0.180264 0.003468
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -2.722714 -0.837758
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name FR_calf_joint
+		parent FR_thigh
+		child FR_calf
+		jointCPos -0.000896 0.150771 -0.004311
+		jointPPos -0.018947 -0.180264 0.003468
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -2.722714 -0.837758
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RL_calf_joint
+		parent RL_thigh
+		child RL_calf
+		jointCPos -0.000896 0.150771 -0.004311
+		jointPPos 0.018947 -0.180264 0.003468
+	/End_Joint
+
+
+	RBJoint
+		jointAxis 1.000000 0.000000 0.000000
+		defaultAngle 0.000000
+		jointMotorKp 12000.000000
+		jointMotorKd 0.100000
+		jointLimits -2.722714 -0.837758
+		jointMaxSpeed 30.100000
+		jointMaxTorque 23.700000
+		name RR_calf_joint
+		parent RR_thigh
+		child RR_calf
+		jointCPos -0.000896 0.150771 -0.004311
+		jointPPos -0.018947 -0.180264 0.003468
+	/End_Joint
+
+

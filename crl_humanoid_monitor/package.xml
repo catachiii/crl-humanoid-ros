@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>crl_humanoid_monitor</name>
+  <version>0.2.0</version>
+  <description>ROS package for humanoid monitor with MuJoCo GUI support.</description>
+  <maintainer email="kangd@inf.ethz.ch">zijhui</maintainer>
+  <license>ETH Computational Robotics Lab</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>crl_fsm</build_depend>
+  <build_depend>crl_humanoid_commons</build_depend>
+  <build_depend>rclcpp</build_depend>
+
+  <exec_depend>crl_fsm</exec_depend>
+  <exec_depend>crl_humanoid_commons</exec_depend>
+  <exec_depend>rclcpp</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

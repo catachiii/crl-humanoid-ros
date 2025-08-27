@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>crl_humanoid_simulator</name>
+  <version>0.8.0</version>
+  <description>ROS package for humanoid simulator.</description>
+  <maintainer email="kangd@inf.ethz.ch">Dongho Kang</maintainer>
+  <license>ETH Computational Robotics Lab</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>crl_humanoid_commons</build_depend>
+
+  <exec_depend>crl_humanoid_monitor</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

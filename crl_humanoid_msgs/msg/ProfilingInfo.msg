@@ -1,0 +1,3 @@
+float32 main_execution_time
+float32 comm_execution_time
+float32 cont_execution_time

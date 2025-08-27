@@ -1,0 +1,3 @@
+float32 speed_forward
+float32 speed_sideways
+float32 speed_turning

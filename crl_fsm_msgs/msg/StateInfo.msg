@@ -1,0 +1,1 @@
+int8 cur_state

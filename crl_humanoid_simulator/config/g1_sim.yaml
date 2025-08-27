@@ -1,0 +1,144 @@
+/**:
+  estop:
+    ros__parameters:
+      time_step_size: 0.02
+
+  stand:
+    ros__parameters:
+      time_step_size: 0.02
+      duration: 1.0
+
+  controller:
+    ros__parameters:
+      time_step_size: 0.002
+
+  comm:
+    ros__parameters:
+      time_step_size: 0.01
+      monitorPublisherQueueSize: 10
+      remoteSubscriberQueueSize: 10
+
+  robot:
+    ros__parameters:
+      time_step_size: 0.001667
+      # =============================================================================
+      # Unitree G1 Humanoid Robot Configuration (29 DOF)
+      # =============================================================================
+      # Joint order: left_leg(6) + right_leg(6) + waist(3) + left_arm(7) + right_arm(7)
+      #
+      # Joint naming convention:
+      #   Left leg:  hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      #   Right leg: hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll
+      #   Waist:     yaw, roll, pitch
+      #   Left arm:  shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, wrist_roll, wrist_pitch, wrist_yaw
+      #   Right arm: shoulder_pitch, shoulder_roll, shoulder_yaw, elbow, wrist_roll, wrist_pitch, wrist_yaw
+      # =============================================================================
+
+      # Joint Position Limits [rad]
+      joint_position_max: [
+        # Left leg (6 DOF)
+        2.8798,  2.9671,  2.7576,  2.8798,  0.5236,  0.2618,
+        # Right leg (6 DOF)
+        2.8798,  0.5236,  2.7576,  2.8798,  0.5236,  0.2618,
+        # Waist (3 DOF)
+        2.618,   0.52,    0.52,
+        # Left arm (7 DOF)
+        2.6704,  2.2515,  2.618,   2.0944,  1.97222, 1.61443, 1.61443,
+        # Right arm (7 DOF)
+        2.6704,  1.5882,  2.618,   2.0944,  1.97222, 1.61443, 1.61443
+      ]
+
+      joint_position_min: [
+        # Left leg (6 DOF)
+        -2.5307, -0.5236, -2.7576, -0.087267, -0.87267, -0.2618,
+        # Right leg (6 DOF)
+        -2.5307, -2.9671, -2.7576, -0.087267, -0.87267, -0.2618,
+        # Waist (3 DOF)
+        -2.618,  -0.52,   -0.52,
+        # Left arm (7 DOF)
+        -3.0892, -1.5882, -2.618,  -1.0472,  -1.97222, -1.61443, -1.61443,
+        # Right arm (7 DOF)
+        -3.0892, -2.2515, -2.618,  -1.0472,  -1.97222, -1.61443, -1.61443
+      ]
+
+      # Joint Velocity Limits [rad/s]
+      joint_velocity_max: [
+        # Left leg (6 DOF) - locomotion joints
+        15.0, 15.0, 15.0, 15.0, 10.0, 10.0,
+        # Right leg (6 DOF)
+        15.0, 15.0, 15.0, 15.0, 10.0, 10.0,
+        # Waist (3 DOF) - stability focus
+        10.0, 8.0,  8.0,
+        # Left arm (7 DOF) - manipulation joints
+        20.0, 20.0, 20.0, 25.0, 30.0, 25.0, 25.0,
+        # Right arm (7 DOF)
+        20.0, 20.0, 20.0, 25.0, 30.0, 25.0, 25.0
+      ]
+
+      # Joint Torque Limits [Nm]
+      joint_torque_max: [
+        # Left leg (6 DOF) - high torque for locomotion
+        88.0, 139.0, 88.0, 139.0, 50.0, 50.0,
+        # Right leg (6 DOF)
+        88.0, 139.0, 88.0, 139.0, 50.0, 50.0,
+        # Waist (3 DOF) - medium torque for stability
+        88.0, 50.0,  50.0,
+        # Left arm (7 DOF) - lower torque for manipulation
+        25.0, 25.0,  25.0, 25.0, 25.0, 5.0, 5.0,
+        # Right arm (7 DOF)
+        25.0, 25.0,  25.0, 25.0, 25.0, 5.0, 5.0
+      ]
+
+      # Position Control Gains
+      joint_position_control_kp: [
+        # Left leg (6 DOF)
+        80.0, 80.0, 80.0, 100.0, 60.0, 60.0,
+        # Right leg (6 DOF)
+        80.0, 80.0, 80.0, 100.0, 60.0, 60.0,
+        # Waist (3 DOF)
+        60.0, 40.0, 40.0,
+        # Left arm (7 DOF)
+        40.0, 40.0, 40.0, 50.0,  30.0, 20.0, 20.0,
+        # Right arm (7 DOF)
+        40.0, 40.0, 40.0, 50.0,  30.0, 20.0, 20.0
+      ]
+
+      joint_position_control_kd: [
+        # Left leg (6 DOF)
+        2.0, 2.0, 2.0, 2.5, 1.5, 1.5,
+        # Right leg (6 DOF)
+        2.0, 2.0, 2.0, 2.5, 1.5, 1.5,
+        # Waist (3 DOF)
+        1.5, 1.0, 1.0,
+        # Left arm (7 DOF)
+        1.0, 1.0, 1.0, 1.2, 0.8, 0.5, 0.5,
+        # Right arm (7 DOF)
+        1.0, 1.0, 1.0, 1.2, 0.8, 0.5, 0.5
+      ]
+
+      # Torque Control Gains
+      joint_torque_control_kp: [
+        # Left leg (6 DOF)
+        40.0, 40.0, 40.0, 50.0, 30.0, 30.0,
+        # Right leg (6 DOF)
+        40.0, 40.0, 40.0, 50.0, 30.0, 30.0,
+        # Waist (3 DOF)
+        30.0, 20.0, 20.0,
+        # Left arm (7 DOF)
+        20.0, 20.0, 20.0, 25.0, 15.0, 10.0, 10.0,
+        # Right arm (7 DOF)
+        20.0, 20.0, 20.0, 25.0, 15.0, 10.0, 10.0
+      ]
+
+      joint_torque_control_kd: [
+        # Left leg (6 DOF)
+        1.0, 1.0, 1.0, 1.2, 0.8, 0.8,
+        # Right leg (6 DOF)
+        1.0, 1.0, 1.0, 1.2, 0.8, 0.8,
+        # Waist (3 DOF)
+        0.8, 0.5, 0.5,
+        # Left arm (7 DOF)
+        0.5, 0.5, 0.5, 0.6, 0.4, 0.3, 0.3,
+        # Right arm (7 DOF)
+        0.5, 0.5, 0.5, 0.6, 0.4, 0.3, 0.3
+      ]
