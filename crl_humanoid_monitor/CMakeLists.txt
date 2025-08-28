@@ -21,9 +21,10 @@ find_package(crl_ros_helper REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
-# MuJoCo dependency
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(MUJOCO REQUIRED mujoco)
+# MuJoCo dependency - set paths manually
+set(MUJOCO_INCLUDE_DIRS /opt/mujoco/include)
+set(MUJOCO_LIBRARY_DIRS /opt/mujoco/lib)
+set(MUJOCO_LIBRARIES mujoco)
 
 # -----------------------------------------------------------------------------
 # executable
@@ -66,5 +67,5 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm crl_ros_helper OpenGL glfw3 PkgConfig)
+ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm crl_ros_helper OpenGL glfw3)
 ament_package()

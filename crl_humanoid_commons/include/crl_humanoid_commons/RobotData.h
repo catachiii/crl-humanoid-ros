@@ -61,6 +61,7 @@ namespace crl::unitree::commons {
         Quaternion baseOrientation = Quaternion::Identity();
         V3D baseOrientationCov = V3D(0, 0, 0); // covariance of base orientation
         V3D baseAngularVelocity = V3D(0, 0, 0);
+        V3D baseAngularVelocityCov = V3D(0, 0, 0); // covariance of base angular velocity
 
         struct LeggedRobotJointState {
             std::string jointName;
@@ -71,19 +72,14 @@ namespace crl::unitree::commons {
     };
 
     struct LeggedRobotControlSignal {
-        P3D targetBasePos = P3D(0, 0, 0);
-        Quaternion targetBaseOrientation = Quaternion::Identity();
-        V3D targetBaseVel = V3D(0, 0, 0);
-        V3D targetBaseAngularVelocity = V3D(0, 0, 0);
-        V3D targetBaseAcc = V3D(0, 0, 0); // desired base acceleration
-        V3D targetBaseAngularAcc = V3D(0, 0, 0); // desired base angular acceleration
-
         struct LeggedRobotJointControlSignal {
             std::string name;
             RBJointControlMode mode = RBJointControlMode::PASSIVE_MODE;
             double desiredPos = 0;
             double desiredSpeed = 0;
             double desiredTorque = 0;
+            double stiffness = 0;
+            double damping = 0;
         };
         std::vector<LeggedRobotJointControlSignal> jointControl;
     };

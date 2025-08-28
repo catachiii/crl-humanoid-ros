@@ -20,6 +20,11 @@ namespace crl::unitree::commons {
 
             private:
             void timerCallbackImpl() override;
+
+            protected:
+            int jointCount_ = 0;  // number of joints
+            // damping
+            crl::dVector jointDamping_;
         };
 
 }  // namespace crl::unitree::commons

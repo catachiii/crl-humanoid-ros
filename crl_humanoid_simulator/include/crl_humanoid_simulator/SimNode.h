@@ -42,7 +42,7 @@ namespace crl::unitree::simulator {
             auto simulationParamDesc = rcl_interfaces::msg::ParameterDescriptor{};
             simulationParamDesc.description = "Simulation parameters";
             simulationParamDesc.read_only = true;
-            this->template declare_parameter<std::string>("robot_xml_file", "scene_crl.xml", simulationParamDesc);
+            this->template declare_parameter<std::string>("robot_xml_file", "g1_description/scene_crl.xml", simulationParamDesc);
 
             // Setup elastic band service
             elasticBandService_ = this->template create_service<crl_humanoid_msgs::srv::ElasticBand>(
@@ -97,7 +97,7 @@ namespace crl::unitree::simulator {
         }
 
     protected:
-        void resetRobot(const crl::unitree::commons::UnitreeRobotModel& [[maybe_unused]] model) override {
+        void resetRobot(const crl::unitree::commons::UnitreeRobotModel& model) override {
             std::lock_guard<std::mutex> lock(mujocoMutex_);
             if (mujocoData_ && mujocoModel_) {
                 mj_resetData(mujocoModel_, mujocoData_);
@@ -153,6 +153,7 @@ namespace crl::unitree::simulator {
             groundTruthState.basePositionCov = crl::V3D(0, 0, 0);
             groundTruthState.baseVelocityCov = crl::V3D(0, 0, 0);
             groundTruthState.baseOrientationCov = crl::V3D(0, 0, 0);
+            groundTruthState.baseAngularVelocityCov = crl::V3D(0, 0, 0);
 
             // Update the robot data with ground truth state
             this->data_->setLeggedRobotState(groundTruthState);
@@ -243,23 +244,29 @@ namespace crl::unitree::simulator {
                 // Check joint angle / velocity violation only in WALK mode
                 auto state = this->fsm_state_informer.get_first_state();
                 if (state == States::WALK) {
-                    for (size_t i = 0; i < q.size() && i < this->JOINT_POSITION_MAX.size(); ++i) {
+                    for (size_t i = 0; i < q.size() && i < this->jointCount_; ++i) {
                         // Angle limit check
-                        if (q[i] > this->JOINT_POSITION_MAX[i]) {
+                        if (q[i] > this->jointPosMax_[i]) {
                             jointLimit = true;
-                            RCLCPP_WARN(this->get_logger(), "Joint %zu, with current angle %f, breached max angle %f",
-                                       i, q[i], this->JOINT_POSITION_MAX[i]);
+                            RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current angle %f, breached max angle %f",
+                                       i, sensorInput.jointSensors[i].jointName.c_str(), q[i], this->jointPosMax_[i]);
                         }
-                        if (q[i] < this->JOINT_POSITION_MIN[i]) {
+                        if (q[i] < this->jointPosMin_[i]) {
                             jointLimit = true;
-                            RCLCPP_WARN(this->get_logger(), "Joint %zu, with current angle %f, breached min angle %f",
-                                       i, q[i], this->JOINT_POSITION_MIN[i]);
+                            RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current angle %f, breached min angle %f",
+                                       i, sensorInput.jointSensors[i].jointName.c_str(), q[i], this->jointPosMin_[i]);
                         }
                         // Velocity limit check
-                        if (std::abs(dq[i]) > this->JOINT_VELOCITY_MAX[i]) {
+                        if (std::abs(dq[i]) > this->jointVelMax_[i]) {
                             jointLimit = true;
-                            RCLCPP_WARN(this->get_logger(), "Joint %zu, with current velocity %f, breached max velocity %f",
-                                       i, dq[i], this->JOINT_VELOCITY_MAX[i]);
+                            RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current velocity %f, breached max velocity %f",
+                                       i, sensorInput.jointSensors[i].jointName.c_str(), dq[i], this->jointVelMax_[i]);
+                        }
+                        // Torque limit check
+                        if (std::abs(tau[i]) > this->jointTorqueMax_[i]) {
+                            jointLimit = true;
+                            RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current torque %f, breached max torque %f",
+                                       i, sensorInput.jointSensors[i].jointName.c_str(), tau[i], this->jointTorqueMax_[i]);
                         }
                     }
                 }
@@ -287,31 +294,14 @@ namespace crl::unitree::simulator {
 
             auto control = this->data_->getControlSignal();
 
-            // Safety check
-            bool torqueLimit = false;
             std::vector<double> q, dq, tau;
             getJointStates(q, dq, tau);
-
-            for (size_t i = 0; i < control.jointControl.size() && i < this->JOINT_TORQUE_MAX.size(); ++i) {
-                double torque = control.jointControl[i].desiredTorque;
-
-                // Torque limit check
-                if (std::abs(torque) > this->JOINT_TORQUE_MAX[i]) {
-                    torqueLimit = true;
-                    RCLCPP_WARN(this->get_logger(), "Joint %zu, with current torque %f, breached max torque %f",
-                               i, torque, this->JOINT_TORQUE_MAX[i]);
-                }
-            }
-
-            // Trigger estop if safety check failed
-            if (torqueLimit && !this->data_->softEStop) {
-                RCLCPP_WARN(this->get_logger(), "Torque limit breached, switching to ESTOP.");
-                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
-            }
 
             // Apply control signals to MuJoCo
             bool eStop = this->data_->softEStop;
 
+
+            bool jointCommandTorqueLimit = false;
             for (size_t dataIdx = 0; dataIdx < control.jointControl.size() && dataIdx < static_cast<size_t>(mujocoModel_->nu); ++dataIdx) {
                 double commandTorque = 0.0;
                 double currentPos = (dataIdx < q.size()) ? q[dataIdx] : 0.0;
@@ -319,25 +309,41 @@ namespace crl::unitree::simulator {
 
                 if (eStop) {
                     // Pure damping in simulation for soft-estop
-                    commandTorque = -this->JOINT_POSITION_CONTROL_KD[dataIdx] * currentVel;
+                    commandTorque = -this->jointDampingDefault_[dataIdx] * currentVel;
                 } else {
+                    // Use per-joint stiffness and damping if provided, otherwise fall back to global values
+                    double jointKp = (control.jointControl[dataIdx].stiffness > 0) ?
+                                    control.jointControl[dataIdx].stiffness :
+                                    this->jointStiffnessDefault_[dataIdx];
+                    double jointKd = (control.jointControl[dataIdx].damping > 0) ?
+                                    control.jointControl[dataIdx].damping :
+                                    this->jointDampingDefault_[dataIdx];
+
                     // Normal control mode
                     switch (static_cast<int>(control.jointControl[dataIdx].mode)) {
                         case 1: // Position mode
-                            commandTorque = this->JOINT_POSITION_CONTROL_KP[dataIdx] * (control.jointControl[dataIdx].desiredPos - currentPos) +
-                                           this->JOINT_POSITION_CONTROL_KD[dataIdx] * (0.0 - currentVel);
+                            commandTorque = jointKp * (control.jointControl[dataIdx].desiredPos - currentPos) +
+                                           jointKd * (0.0 - currentVel);
                             break;
                         case 2: // Velocity mode
-                            commandTorque = this->JOINT_POSITION_CONTROL_KD[dataIdx] * (control.jointControl[dataIdx].desiredSpeed - currentVel);
+                            commandTorque = jointKd * (control.jointControl[dataIdx].desiredSpeed - currentVel);
                             break;
                         case 3: // Force/Torque mode
                             commandTorque = control.jointControl[dataIdx].desiredTorque +
-                                           this->JOINT_TORQUE_CONTROL_KP[dataIdx] * (control.jointControl[dataIdx].desiredPos - currentPos) +
-                                           this->JOINT_TORQUE_CONTROL_KD[dataIdx] * (control.jointControl[dataIdx].desiredSpeed - currentVel);
+                                           jointKp * (control.jointControl[dataIdx].desiredPos - currentPos) +
+                                           jointKd * (control.jointControl[dataIdx].desiredSpeed - currentVel);
                             break;
                         default: // Motor brake (same as soft e-stop)
-                            commandTorque = -this->JOINT_POSITION_CONTROL_KD[dataIdx] * currentVel;
+                            commandTorque = -jointKd * currentVel;
                             break;
+                    }
+
+                    // safety check the command Torque
+                    if (std::abs(commandTorque) > this->jointTorqueMax_[dataIdx]) {
+                        RCLCPP_WARN(this->get_logger(), "Joint %zu (%s) torque command exceeds max limit: %f > %f",
+                                    dataIdx, control.jointControl[dataIdx].name.c_str(), commandTorque, this->jointTorqueMax_[dataIdx]);
+                        commandTorque = std::copysign(this->jointTorqueMax_[dataIdx], commandTorque);
+                        jointCommandTorqueLimit = true;
                     }
                 }
 
@@ -363,18 +369,19 @@ namespace crl::unitree::simulator {
                                          "Data index %zu out of bounds for mapping array size %zu", dataIdx, dataToMujocoMapping_.size());
                 }
             }
-        }
 
-        void applyRobotParameters() override {
-            BaseRobotNode::applyRobotParameters();
-            // MuJoCo handles all physics parameters internally
+            // Trigger estop if safety check failed
+            if (jointCommandTorqueLimit && !this->data_->softEStop) {
+                RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
+                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
+            }
         }
 
     private:
         void initializeMuJoCo() {
             // Load MuJoCo model
             std::string xmlPath = this->get_parameter("robot_xml_file").as_string();
-            std::string fullPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/g1_description/" + xmlPath;
+            std::string fullPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/" + xmlPath;
 
             char error[1000];
             mujocoModel_ = mj_loadXML(fullPath.c_str(), nullptr, error, sizeof(error));

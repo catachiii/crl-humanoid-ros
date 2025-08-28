@@ -4,7 +4,13 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    config = os.path.join(
+    monitor_config = os.path.join(
+        get_package_share_directory("crl_humanoid_monitor"),
+        'config',
+        'g1_monitor.yaml'
+    )
+
+    sim_config = os.path.join(
         get_package_share_directory("crl_humanoid_simulator"),
         'config',
         'g1_sim.yaml'
@@ -15,12 +21,13 @@ def generate_launch_description():
             package='crl_humanoid_simulator',
             namespace='g1_sim',
             executable='sim',
-            parameters=[config],
+            parameters=[sim_config],
         ),
         Node(
             package='crl_humanoid_monitor',
             namespace='g1_sim',
             executable='monitor',
+            parameters=[monitor_config],
             remappings=[
                 ('monitor_joystick', 'remote')
             ]

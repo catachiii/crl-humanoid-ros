@@ -19,9 +19,10 @@ find_package(crl_humanoid_commons 0.8 REQUIRED EXACT)
 find_package(crl_humanoid_msgs REQUIRED)
 find_package(crl_fsm REQUIRED)
 
-# MuJoCo dependency
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(MUJOCO REQUIRED mujoco)
+# MuJoCo dependency - set paths manually
+set(MUJOCO_INCLUDE_DIRS /opt/mujoco/include)
+set(MUJOCO_LIBRARY_DIRS /opt/mujoco/lib)
+set(MUJOCO_LIBRARIES mujoco)
 
 # -----------------------------------------------------------------------------
 # resource files
@@ -81,5 +82,5 @@ if(BUILD_TESTING)
 endif()
 
 # No library targets to export since SimNode is header-only
-ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm PkgConfig)
+ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm)
 ament_package()

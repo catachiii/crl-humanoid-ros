@@ -14,7 +14,9 @@ namespace crl::unitree::commons {
         paramDesc.read_only = true;
         paramDesc.description = "Starter parameters";
         this->declare_parameter<double>("duration", 1.0, paramDesc);
-        this->declare_parameter<std::vector<double>>("standAngleTarget", model.defaultJointConf, paramDesc);
+        this->declare_parameter<std::vector<double>>("target_joint_angles", model.defaultJointConf, paramDesc);
+        this->declare_parameter<std::vector<double>>("joint_stiffness", model.jointStiffnessDefault, paramDesc);
+        this->declare_parameter<std::vector<double>>("joint_damping", model.jointDampingDefault, paramDesc);
 
         // reset command
         auto comm = data_->getCommand();
@@ -26,8 +28,17 @@ namespace crl::unitree::commons {
         // init time at transition
         timeAtTransition_ = data_->getTimeStamp();
 
+        jointCount_ = model.defaultJointConf.size();
+        // stiffness and damping
+        crl::resize(jointStiffness_, jointCount_);
+        crl::resize(jointDamping_, jointCount_);
+        // init joint stiffness and damping
+        for (int i = 0; i < jointCount_; i++) {
+            jointStiffness_[i] = this->get_parameter("joint_stiffness").as_double_array()[i];
+            jointDamping_[i] = this->get_parameter("joint_damping").as_double_array()[i];
+        }
+
         // init initial joint angle
-        jointCount_ = this->get_parameter("standAngleTarget").as_double_array().size();
         crl::resize(initialJointAngle_, jointCount_);
         auto sensor = data_->getSensor();
         for (int i = 0; i < jointCount_; i++) {
@@ -37,7 +48,12 @@ namespace crl::unitree::commons {
         // target joint angles
         crl::resize(targetJointAngle_, jointCount_);
         for (int i = 0; i < jointCount_; i++) {
-            targetJointAngle_[i] = this->get_parameter("standAngleTarget").as_double_array()[i];
+            if (target == TargetMode::ZERO)
+                targetJointAngle_[i] = 0.0;
+            else if (target == TargetMode::STAND)
+                targetJointAngle_[i] = this->get_parameter("target_joint_angles").as_double_array()[i];
+            else
+                RCLCPP_ERROR(this->get_logger(), "Unknown target mode.");
         }
     }
 
@@ -68,14 +84,14 @@ namespace crl::unitree::commons {
         crl::unitree::commons::LeggedRobotControlSignal control = data_->getControlSignal();
         for (int i = 0; i < (int)control.jointControl.size(); i++) {
             control.jointControl[i].mode = crl::unitree::commons::RBJointControlMode::POSITION_MODE;
+            control.jointControl[i].stiffness = jointStiffness_[i];
+            control.jointControl[i].damping = jointDamping_[i];
             control.jointControl[i].desiredPos = percent * targetJointAngle_[i] + (1 - percent) * initialJointAngle_[i];
             control.jointControl[i].desiredSpeed = 0;
             control.jointControl[i].desiredTorque = 0;
         }
 
         // other information
-        control.targetBaseAcc = crl::V3D();
-        control.targetBaseAngularAcc = crl::V3D();
         data_->setControlSignal(control);
 
         // populate execution time (for profiling)

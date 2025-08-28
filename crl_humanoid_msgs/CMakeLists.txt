@@ -32,8 +32,7 @@ set(msg_files
         "msg/Monitor.msg"
         "msg/Remote.msg"
         "msg/ProfilingInfo.msg"
-        "msg/PyState.msg"
-        "msg/PyControl.msg"
+        "msg/ExtendedJointControl.msg"
 )
 
 # services

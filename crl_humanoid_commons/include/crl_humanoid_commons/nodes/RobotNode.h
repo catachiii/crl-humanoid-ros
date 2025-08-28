@@ -27,34 +27,36 @@ namespace crl::unitree::commons {
               fsm_state_informer("robot", monitoring),
               is_transitioning(is_transitioning) {
             // joint parameters
-            jointCount = this->model_.jointNames.size();
-            JOINT_POSITION_CONTROL_KP.resize(jointCount);
-            JOINT_POSITION_CONTROL_KD.resize(jointCount);
-            JOINT_TORQUE_CONTROL_KP.resize(jointCount);
-            JOINT_TORQUE_CONTROL_KD.resize(jointCount);
-            JOINT_POSITION_MAX.resize(jointCount);
-            JOINT_POSITION_MIN.resize(jointCount);
-            JOINT_VELOCITY_MAX.resize(jointCount);
-            JOINT_TORQUE_MAX.resize(jointCount);
+            jointCount_ = this->model_.jointNames.size();
+            jointPosMax_.resize(jointCount_);
+            jointPosMin_.resize(jointCount_);
+            jointVelMax_.resize(jointCount_);
+            jointTorqueMax_.resize(jointCount_);
+            jointStiffnessDefault_.resize(jointCount_);
+            jointDampingDefault_.resize(jointCount_);
 
             // parameters
             auto jointParamDesc = rcl_interfaces::msg::ParameterDescriptor{};
             jointParamDesc.read_only = false;
             jointParamDesc.description = "Robot joint parameters";
-            this->template declare_parameter<std::vector<double>>("joint_position_max", JOINT_POSITION_MAX, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_position_min", JOINT_POSITION_MIN, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_velocity_max", JOINT_VELOCITY_MAX, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_torque_max", JOINT_TORQUE_MAX, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_position_control_kp", JOINT_POSITION_CONTROL_KP, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_position_control_kd", JOINT_POSITION_CONTROL_KD, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_torque_control_kp", JOINT_TORQUE_CONTROL_KP, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_torque_control_kd", JOINT_TORQUE_CONTROL_KD, jointParamDesc);
-            this->template declare_parameter<double>("joystick_forward_max", joystickMaximumForwardVelocity, jointParamDesc);
-            this->template declare_parameter<double>("joystick_backward_max", joystickMaximumBackwardVelocity, jointParamDesc);
-            this->template declare_parameter<double>("joystick_sideways_max", joystickMaximumSidewaysVelocity, jointParamDesc);
-            this->template declare_parameter<double>("joystick_turning_max", joystickMaximumTurningVelocity, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_position_max", model.jointPosMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_position_min", model.jointPosMin, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_velocity_max", model.jointVelMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_torque_max", model.jointTorqueMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_stiffness_default", model.jointStiffnessDefault, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_damping_default", model.jointDampingDefault, jointParamDesc);
 
-            // initialize command according to robot model
+            // joint gains
+            for (int i = 0; i < jointCount_; i++) {
+                jointPosMax_[i] = this->get_parameter("joint_position_max").as_double_array()[i];
+                jointPosMin_[i] = this->get_parameter("joint_position_min").as_double_array()[i];
+                jointVelMax_[i] = this->get_parameter("joint_velocity_max").as_double_array()[i];
+                jointTorqueMax_[i] = this->get_parameter("joint_torque_max").as_double_array()[i];
+                jointStiffnessDefault_[i] = this->get_parameter("joint_stiffness_default").as_double_array()[i];
+                jointDampingDefault_[i] = this->get_parameter("joint_damping_default").as_double_array()[i];
+            }
+
+            // initialize command so it does not do anything when starting
             auto comm = data_->getCommand();
             comm.targetForwardSpeed = 0;
             comm.targetSidewaysSpeed = 0;
@@ -75,29 +77,6 @@ namespace crl::unitree::commons {
         ~RobotNode() override = default;
 
     protected:
-        /**
-         * Apply rosparam to robot.
-         */
-        virtual void applyRobotParameters() {
-            // joystick gains
-            joystickMaximumForwardVelocity = this->get_parameter("joystick_forward_max").as_double();
-            joystickMaximumBackwardVelocity = this->get_parameter("joystick_backward_max").as_double();
-            joystickMaximumSidewaysVelocity = this->get_parameter("joystick_sideways_max").as_double();
-            joystickMaximumTurningVelocity = this->get_parameter("joystick_turning_max").as_double();
-
-            // joint gains
-            for (int i = 0; i < jointCount; i++) {
-                JOINT_POSITION_MAX[i] = this->get_parameter("joint_position_max").as_double_array()[i];
-                JOINT_POSITION_MIN[i] = this->get_parameter("joint_position_min").as_double_array()[i];
-                JOINT_VELOCITY_MAX[i] = this->get_parameter("joint_velocity_max").as_double_array()[i];
-                JOINT_TORQUE_MAX[i] = this->get_parameter("joint_torque_max").as_double_array()[i];
-                JOINT_POSITION_CONTROL_KP[i] = this->get_parameter("joint_position_control_kp").as_double_array()[i];
-                JOINT_POSITION_CONTROL_KD[i] = this->get_parameter("joint_position_control_kd").as_double_array()[i];
-                JOINT_TORQUE_CONTROL_KP[i] = this->get_parameter("joint_torque_control_kp").as_double_array()[i];
-                JOINT_TORQUE_CONTROL_KD[i] = this->get_parameter("joint_torque_control_kd").as_double_array()[i];
-            }
-        };
-
         /**
          * Read sensors through robot's API call.
          */
@@ -141,9 +120,6 @@ namespace crl::unitree::commons {
                 RCLCPP_INFO(this->get_logger(), "Start robot.");
             }
 
-            // apply robot parameters
-            applyRobotParameters();
-
             // get robot state through robot API
             updateDataWithSensorReadings();
 
@@ -164,21 +140,13 @@ namespace crl::unitree::commons {
 
     protected:
         // joint parameters
-        int jointCount = 0;
-        std::vector<double> JOINT_POSITION_CONTROL_KP;
-        std::vector<double> JOINT_POSITION_CONTROL_KD;
-        std::vector<double> JOINT_TORQUE_CONTROL_KP;
-        std::vector<double> JOINT_TORQUE_CONTROL_KD;
-        std::vector<double> JOINT_POSITION_MAX;
-        std::vector<double> JOINT_POSITION_MIN;
-        std::vector<double> JOINT_VELOCITY_MAX;
-        std::vector<double> JOINT_TORQUE_MAX;
-
-        // joystick parameters
-        double joystickMaximumForwardVelocity = 1.0;   // [m/s]
-        double joystickMaximumBackwardVelocity = 1.0;  // [m/s]
-        double joystickMaximumSidewaysVelocity = 1.0;  // [rad/s]
-        double joystickMaximumTurningVelocity = 1.0;   // [rad/s]
+        int jointCount_ = 0;
+        std::vector<double> jointPosMax_;
+        std::vector<double> jointPosMin_;
+        std::vector<double> jointVelMax_;
+        std::vector<double> jointTorqueMax_;
+        std::vector<double> jointStiffnessDefault_;
+        std::vector<double> jointDampingDefault_;
 
         // fsm
         crl::fsm::Broadcaster<States, Machines, N> fsm_broadcaster;

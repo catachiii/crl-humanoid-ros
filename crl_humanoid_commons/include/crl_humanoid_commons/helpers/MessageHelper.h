@@ -11,7 +11,6 @@
 #include "crl_humanoid_msgs/msg/remote.hpp"
 #include "crl_humanoid_msgs/msg/sensor.hpp"
 #include "crl_humanoid_msgs/msg/state.hpp"
-#include "crl_humanoid_msgs/msg/py_control.hpp"
 
 namespace crl::unitree::commons {
 
@@ -113,9 +112,9 @@ namespace crl::unitree::commons {
     inline void populateStateMessageFromData(const crl::unitree::commons::LeggedRobotState& data, crl_humanoid_msgs::msg::State& state) {
         populatePointFromP3D(data.basePosition, state.base_pose.pose.position);
         populateQuaternionFromQuaternion(data.baseOrientation, state.base_pose.pose.orientation);
-        populatePoseCovarianceFromV3D(data.basePositionCov, state.base_pose.covariance);
         populateVectorFromV3D(data.baseVelocity, state.base_twist.twist.linear);
         populateVectorFromV3D(data.baseAngularVelocity, state.base_twist.twist.angular);
+        // TODO: populate the covariance as well.
         int nj = data.jointStates.size();
         state.joint.name.resize(nj);
         state.joint.position.resize(nj);
@@ -130,9 +129,9 @@ namespace crl::unitree::commons {
     inline void populateDataFromStateMessage(const crl_humanoid_msgs::msg::State& state, crl::unitree::commons::LeggedRobotState& data) {
         populateP3DFromPoint(state.base_pose.pose.position, data.basePosition);
         populateQuaternionFromQuaternion(state.base_pose.pose.orientation, data.baseOrientation);
-        populateV3DFromPoseCovariance(state.base_pose.covariance, data.basePositionCov);
         populateV3DFromVector(state.base_twist.twist.linear, data.baseVelocity);
         populateV3DFromVector(state.base_twist.twist.angular, data.baseAngularVelocity);
+        // TODO: populate the covariance as well.
         int nj = state.joint.name.size();
         data.jointStates.resize(nj);
         for (int i = 0; i < nj; i++) {
@@ -147,26 +146,18 @@ namespace crl::unitree::commons {
         control.joint.position.resize(nj);
         control.joint.velocity.resize(nj);
         control.joint.effort.resize(nj);
+        control.joint.stiffness.resize(nj);
+        control.joint.damping.resize(nj);
         control.joint.name.resize(nj);
+        control.joint.mode.resize(nj);
         for (int i = 0; i < nj; i++) {
             control.joint.name[i] = data.jointControl[i].name;
+            control.joint.mode[i] = static_cast<int32_t>(data.jointControl[i].mode);
             control.joint.position[i] = data.jointControl[i].desiredPos;
             control.joint.velocity[i] = data.jointControl[i].desiredSpeed;
             control.joint.effort[i] = data.jointControl[i].desiredTorque;
-        }
-    }
-
-    inline void populatePyControlMessageFromData(const crl::unitree::commons::LeggedRobotControlSignal& data, crl_humanoid_msgs::msg::PyControl& control) {
-        int nj = data.jointControl.size();
-        control.joint.position.resize(nj);
-        control.joint.velocity.resize(nj);
-        control.joint.effort.resize(nj);
-        control.joint.name.resize(nj);
-        for (int i = 0; i < nj; i++) {
-            control.joint.name[i] = data.jointControl[i].name;
-            control.joint.position[i] = data.jointControl[i].desiredPos;
-            control.joint.velocity[i] = data.jointControl[i].desiredSpeed;
-            control.joint.effort[i] = data.jointControl[i].desiredTorque;
+            control.joint.stiffness[i] = data.jointControl[i].stiffness;
+            control.joint.damping[i] = data.jointControl[i].damping;
         }
     }
 
@@ -175,22 +166,12 @@ namespace crl::unitree::commons {
         data.jointControl.resize(nj);
         for (int i = 0; i < nj; i++) {
             data.jointControl[i].name = control.joint.name[i];
+            data.jointControl[i].mode = static_cast<crl::unitree::commons::RBJointControlMode>(control.joint.mode[i]);
             data.jointControl[i].desiredPos = control.joint.position[i];
             data.jointControl[i].desiredSpeed = control.joint.velocity[i];
             data.jointControl[i].desiredTorque = control.joint.effort[i];
-        }
-    }
-
-
-    inline void populateDataFromPyControlMessage(const crl_humanoid_msgs::msg::PyControl& control, crl::unitree::commons::LeggedRobotControlSignal& data) {
-        int nj = control.joint.name.size();
-        data.jointControl.resize(nj);
-        for (int i = 0; i < nj; i++) {
-            data.jointControl[i].name = control.joint.name[i];
-            data.jointControl[i].mode = crl::unitree::commons::RBJointControlMode::FORCE_MODE;
-            data.jointControl[i].desiredPos = control.joint.position[i];
-            data.jointControl[i].desiredSpeed = control.joint.velocity[i];
-            data.jointControl[i].desiredTorque = control.joint.effort[i];
+            data.jointControl[i].stiffness = control.joint.stiffness[i];
+            data.jointControl[i].damping = control.joint.damping[i];
         }
     }
 

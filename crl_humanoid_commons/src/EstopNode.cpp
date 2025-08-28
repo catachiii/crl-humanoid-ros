@@ -9,6 +9,20 @@ namespace crl::unitree::commons {
     EstopNode::EstopNode(const UnitreeRobotModel &model,
                          const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData> &data)
             : BaseNode(model, data, "estop") {
+        // parameters
+        auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
+        paramDesc.read_only = true;
+        paramDesc.description = "estop parameters";
+        this->declare_parameter<std::vector<double>>("joint_damping", std::vector<double>(model.defaultJointConf.size(), 0.0), paramDesc);
+
+        jointCount_ = model.defaultJointConf.size();
+        // stiffness and damping
+        crl::resize(jointDamping_, jointCount_);
+        // init joint stiffness and damping
+        for (int i = 0; i < jointCount_; i++) {
+            jointDamping_[i] = this->get_parameter("joint_damping").as_double_array()[i];
+        }
+
         data_->softEStop = true;
 
         // reset command
@@ -25,17 +39,9 @@ namespace crl::unitree::commons {
             control.jointControl[i].desiredPos = 0;
             control.jointControl[i].desiredSpeed = 0;
             control.jointControl[i].desiredTorque = 0;
+            control.jointControl[i].stiffness = 0;
+            control.jointControl[i].damping = 0;
         }
-
-        // other information
-        control.targetBasePos = crl::P3D();
-        control.targetBaseVel = crl::V3D();
-        control.targetBaseOrientation = crl::Quaternion::Identity();
-        control.targetBaseAngularVelocity = crl::V3D();
-        // these are not used in e-stop, but we set them to zero to prevent jumping
-        // when the state transition happens
-        control.targetBaseAcc = crl::V3D();
-        control.targetBaseAngularAcc = crl::V3D();
 
         data_->setControlSignal(control);
     }
@@ -50,6 +56,8 @@ namespace crl::unitree::commons {
             control.jointControl[i].desiredPos = state.jointStates[i].jointPos;
             control.jointControl[i].desiredSpeed = 0;
             control.jointControl[i].desiredTorque = 0;
+            control.jointControl[i].stiffness = 0;
+            control.jointControl[i].damping = 0;
         }
         data_->setControlSignal(control);
         data_->softEStop = false;

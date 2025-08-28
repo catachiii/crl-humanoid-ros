@@ -67,6 +67,13 @@ namespace crl::unitree::monitor {
                               const std::string& nodeName = "mujoco_monitor")
             : crl::ros::Node(nodeName), monitoring_(monitoring), trans_cont_(trans_cont), fsmClient_(to_monitor, trans_cont, monitoring) {
 
+            // params
+            auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
+            paramDesc.description = "MuJoCo monitor parameters";
+            paramDesc.read_only = true;
+            this->declare_parameter<std::string>("model", "g1", paramDesc);
+            this->declare_parameter<std::string>("robot_xml_file", "g1_description/scene_crl.xml", paramDesc);
+
             // Initialize ROS2 clients
             restartServiceClient_ = this->create_client<crl_humanoid_msgs::srv::Restart>("restart");
             elasticBandServiceClient_ = this->create_client<crl_humanoid_msgs::srv::ElasticBand>("elastic_band");
@@ -94,8 +101,14 @@ namespace crl::unitree::monitor {
                 return false;
             }
 
-            // Hardcode for G1 robot
-            modelType_ = crl::unitree::commons::RobotModelType::UNITREE_G1;
+            // get model type
+            if (this->get_parameter("model").as_string() == "g1") {
+                modelType_ = crl::unitree::commons::RobotModelType::UNITREE_G1;
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Unknown model type");
+                return false;
+            }
+
             data_ = std::make_shared<LeggedRobotDataType>();
 
             // Initialize topic subscriptions
@@ -377,7 +390,8 @@ namespace crl::unitree::monitor {
          */
         void initializeMuJoCo() {
             // Load the same model as the simulator
-            std::string xmlPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/g1_description/scene_crl.xml";
+            std::string xmlPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/" +
+                                  this->get_parameter("robot_xml_file").as_string();
 
             char error[1000];
             mujocoModel_ = mj_loadXML(xmlPath.c_str(), nullptr, error, sizeof(error));

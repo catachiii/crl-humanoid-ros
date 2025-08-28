@@ -26,7 +26,7 @@ namespace crl::unitree::commons {
         for (size_t i = 0; i < jointNames.size(); ++i) {
             state.jointStates.push_back({jointNames[i], defaultJointConf[i], 0.0});
             sensor.jointSensors.push_back({jointNames[i], defaultJointConf[i], 0.0, 0.0});
-            control.jointControl.push_back({jointNames[i], RBJointControlMode::PASSIVE_MODE, defaultJointConf[i], 0, 0});
+            control.jointControl.push_back({jointNames[i], RBJointControlMode::PASSIVE_MODE, defaultJointConf[i], 0, 0, 0, 0});
         }
 
     }

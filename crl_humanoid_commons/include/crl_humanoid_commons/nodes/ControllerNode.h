@@ -36,18 +36,7 @@ namespace crl::unitree::commons {
             /**
              * Compute and apply control signal with timestep size dt.
              */
-            virtual void computeAndApplyControlSignals(double dt) {
-                prepareForControlStep(dt);
-                computeControlSignals(dt);
-                applyControlSignals(dt);
-                populateData();
-            }
-
-            protected:
-            virtual void prepareForControlStep(double dt) = 0;
-            virtual void computeControlSignals(double dt) = 0;
-            virtual void applyControlSignals(double dt) = 0;
-            virtual void populateData() = 0;
+            virtual void computeAndApplyControlSignals(double dt) = 0;
         };
 
         /**
@@ -60,21 +49,12 @@ namespace crl::unitree::commons {
                                const std::shared_ptr<UnitreeLeggedRobotData>& data)
                 : LocomotionController(std::make_shared<UnitreeRobotModel>(robot), data) {}
 
-            protected:
-            void prepareForControlStep(double /* dt */) override {
-                // Do nothing
-            }
-
-            void computeControlSignals(double /* dt */) override {
-                // Do nothing
-            }
-
-            void applyControlSignals(double /* dt */) override {
-                // Do nothing
-            }
-
-            void populateData() override {
-                // Do nothing
+            /**
+             * Implementation of pure virtual method that does nothing.
+             */
+            void computeAndApplyControlSignals(double dt) override {
+                // Do nothing - this is a placeholder implementation
+                (void)dt; // Suppress unused parameter warning
             }
         };
 

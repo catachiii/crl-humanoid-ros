@@ -25,7 +25,6 @@ Code for CRL's humanoids (unitree G1, pnd adam, limx tron1)
 - [cxxopts](https://github.com/jarro2783/cxxopts) 3.0.0
   - For parsing command line arguments
 - [nlohmann-json](https://github.com/nlohmann/json) 3.10+
-  - JSON library for C++
 
 ### ROS2 Humble Dependencies
 
@@ -84,29 +83,55 @@ sudo mv mujoco-3.3.5 /opt/mujoco
 sudo ln -s /opt/mujoco/lib/libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so.3.3.5
 sudo ln -s libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so
 
-# Create pkg-config file for MuJoCo
-sudo mkdir -p /usr/local/lib/pkgconfig
-sudo tee /usr/local/lib/pkgconfig/mujoco.pc > /dev/null <<EOF
-prefix=/opt/mujoco
-exec_prefix={prefix}
-libdir={exec_prefix}/lib
-includedir={prefix}/include
-
-Name: mujoco
-Description: MuJoCo Physics Simulator
-Version: 3.3.5
-Libs: -L{libdir} -lmujoco
-Cflags: -I{includedir}
-EOF
-
 # Update library cache
 sudo ldconfig
 ```
+
+**Note:** You do not need to create a pkg-config file for MuJoCo. The build system uses hardcoded paths for MuJoCo and does not require pkg-config.
 
 ### Quick Installation Script
 
 For convenience, you can install all dependencies with:
 
+
+  libboost-all-dev
+  libeigen3-dev
+  nlohmann-json3-dev
+  libcxxopts-dev
+  libglfw3-dev
+  freeglut3-dev
+  mesa-utils
+  libgl1-mesa-glx
+  libgl1-mesa-dri
+```
+
+### Installing MuJoCo 3.3.5
+
+MuJoCo is required for the monitor GUI and simulator packages:
+
+```bash
+# Download and install MuJoCo 3.3.5
+cd /tmp
+wget https://github.com/google-deepmind/mujoco/releases/download/3.3.5/mujoco-3.3.5-linux-x86_64.tar.gz
+tar -xzf mujoco-3.3.5-linux-x86_64.tar.gz
+sudo mv mujoco-3.3.5 /opt/mujoco
+
+# Create symlinks for system library
+sudo ln -s /opt/mujoco/lib/libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so.3.3.5
+sudo ln -s libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so
+
+# Update library cache
+sudo ldconfig
+```
+
+**Note:** You do not need to create a pkg-config file for MuJoCo. The build system uses hardcoded paths for MuJoCo and does not require pkg-config.
+
+### Quick Installation Script
+
+For convenience, you can install all dependencies with:
+
+```bash
+# Install additional ROS2 Humble packages (if not already installed)
 ```bash
 # Install additional ROS2 Humble packages (if not already installed)
 sudo apt update

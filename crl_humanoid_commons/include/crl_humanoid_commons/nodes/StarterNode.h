@@ -10,7 +10,7 @@
 namespace crl::unitree::commons {
 
         /**
-         * Stand logic for unitree robots.
+         * A node to control the robot from current pose to the target pose.
          */
         class StarterNode : public BaseNode {
             public:
@@ -31,6 +31,10 @@ namespace crl::unitree::commons {
             crl::dVector initialJointAngle_;
             // target joint angles
             crl::dVector targetJointAngle_;
+            // stiffness
+            crl::dVector jointStiffness_;
+            // damping
+            crl::dVector jointDamping_;
             // initialized flags
             double timeAtTransition_ = 0.0;
             bool initialized_ = false;
