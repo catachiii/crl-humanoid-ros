@@ -4,7 +4,7 @@
 #include "crl_fsm/client.h"
 
 // FSM states and machines - match simulator exactly
-crl_fsm_states(States, ESTOP, STAND, WALK, );
+crl_fsm_states(States, ESTOP, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char ** argv)

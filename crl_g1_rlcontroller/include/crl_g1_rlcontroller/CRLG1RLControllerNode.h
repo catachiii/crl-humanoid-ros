@@ -2,10 +2,10 @@
 // Created by Jin Cheng and Dongho Kang on 28.11.24.
 //
 
-#ifndef CRL_G1_RLCONTROLLER_COMMONS_CONTROLLERNODE_H
-#define CRL_G1_RLCONTROLLER_COMMONS_CONTROLLERNODE_H
+#ifndef CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
+#define CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
 
-#include "crl_g1_rlcontroller_commons/CRLG1WalkController.h"
+#include "crl_g1_rlcontroller/CRLG1WalkController.h"
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
 
 namespace crl::g1::rlcontroller::commons {
@@ -24,7 +24,7 @@ namespace crl::g1::rlcontroller::commons {
             paramDesc.read_only = true;
             this->declare_parameter("model", "/models/g1_walk/g1_walk_config.json", paramDesc);
 
-            if (!this->controller_->loadModelFromFile(CRL_G1_RLCONTROLLER_COMMONS_DATA_FOLDER + this->get_parameter("model").as_string())) {
+            if (!this->controller_->loadModelFromFile(CRL_G1_RLCONTROLLER_DATA_FOLDER + this->get_parameter("model").as_string())) {
                 RCLCPP_FATAL(this->get_logger(), "Cannot load model file from %s", this->get_parameter("model").as_string().c_str());
             }
         }
@@ -40,4 +40,4 @@ namespace crl::g1::rlcontroller::commons {
 
 }  // namespace crl::g1::rlcontroller::commons
 
-#endif  // CRL_G1_RLCONTROLLER_COMMONS_CONTROLLERNODE_H
+#endif  // CRL_G1_RLCONTROLLER_CONTROLLERNODE_H

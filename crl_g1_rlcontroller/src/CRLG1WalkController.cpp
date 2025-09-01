@@ -3,7 +3,7 @@
 //
 
 
-#include "crl_g1_rlcontroller_commons/CRLG1WalkController.h"
+#include "crl_g1_rlcontroller/CRLG1WalkController.h"
 #include <filesystem>
 #include <fstream>
 #include <string>

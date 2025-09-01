@@ -1,6 +1,6 @@
 
-#ifndef CRL_G1_RLCONTROLLER_COMMONS_H
-#define CRL_G1_RLCONTROLLER_COMMONS_H
+#ifndef CRL_G1_RLCONTROLLER_H
+#define CRL_G1_RLCONTROLLER_H
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
 #include <nlohmann/json.hpp>
@@ -53,4 +53,4 @@ namespace crl::g1::rlcontroller::commons {
 
 }  // namespace crl::g1::rlcontroller::commons
 
-#endif  // CRL_G1_RLCONTROLLER_COMMONS_H
+#endif  // CRL_G1_RLCONTROLLER_H

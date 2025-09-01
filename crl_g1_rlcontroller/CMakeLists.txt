@@ -1,8 +1,7 @@
-
 cmake_minimum_required(VERSION 3.11)
 
 # set name of the project
-project(crl_g1_rlcontroller_commons)
+project(crl_g1_rlcontroller)
 
 # set cxx standard and compiler flag
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +11,7 @@ endif()
 
 # data folder path
 set(
-        CRL_G1_RLCONTROLLER_COMMONS_DATA_FOLDER
+        CRL_G1_RLCONTROLLER_DATA_FOLDER
         "\"${CMAKE_CURRENT_LIST_DIR}/data\""
         CACHE STRING ""
 )
@@ -23,21 +22,35 @@ set(
 
 find_package(crl_humanoid_commons 0.8.0 EXACT REQUIRED)
 find_package(onnxruntime 1.15.0 EXACT REQUIRED)
+find_package(crl_humanoid_simulator 0.8.0 EXACT REQUIRED)
+
+# -----------------------------------------------------------------------------
+# resource files
+# -----------------------------------------------------------------------------
+
+# launch
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
+
+# config
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME}/)
+
+# data
+install(DIRECTORY data DESTINATION share/${PROJECT_NAME}/)
 
 # -----------------------------------------------------------------------------
 # code
 # -----------------------------------------------------------------------------
 
-# source code files
+# library source code files
 set(CRL_TARGET_NAME ${PROJECT_NAME}_lib)
 
 file(
-        GLOB CRL_SOURCES #
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp" #
+        GLOB CRL_LIBRARY_SOURCES #
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1WalkController.cpp" #
 )
 
-# build target
-add_library(${CRL_TARGET_NAME} ${CRL_SOURCES})
+# build library target
+add_library(${CRL_TARGET_NAME} ${CRL_LIBRARY_SOURCES})
 
 # target include dirs
 target_include_directories(
@@ -50,12 +63,19 @@ target_include_directories(
 # compile definitions
 target_compile_definitions(
         ${CRL_TARGET_NAME}
-        PUBLIC "CRL_G1_RLCONTROLLER_COMMONS_DATA_FOLDER=${CRL_G1_RLCONTROLLER_COMMONS_DATA_FOLDER}" #
+        PUBLIC "CRL_G1_RLCONTROLLER_DATA_FOLDER=${CRL_G1_RLCONTROLLER_DATA_FOLDER}" #
 )
 
-# add ros dependencies
+# add ros dependencies to library
 ament_target_dependencies(${CRL_TARGET_NAME} crl_humanoid_commons onnxruntime)
 
+# executable
+add_executable(sim src/simulator_main.cpp)
+
+ament_target_dependencies(sim crl_humanoid_simulator crl_humanoid_commons onnxruntime)
+target_link_libraries(sim ${CRL_TARGET_NAME})
+
+# installations
 install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION include
@@ -68,6 +88,11 @@ install(
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include
+)
+
+install(
+        TARGETS sim
+        DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
@@ -83,7 +108,7 @@ endif()
 
 ament_export_targets(${CRL_TARGET_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
-        crl_humanoid_commons onnxruntime
+        crl_humanoid_commons onnxruntime crl_humanoid_simulator
 )
 
 ament_package()

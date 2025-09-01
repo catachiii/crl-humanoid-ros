@@ -5,8 +5,8 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_simulator/G1SimNode.h>
-#include <crl_g1_rlcontroller_commons/CRLG1RLControllerNode.h>
-#include <crl_g1_rlcontroller_commons/CRLG1WalkController.h>
+#include <crl_g1_rlcontroller/CRLG1RLControllerNode.h>
+#include <crl_g1_rlcontroller/CRLG1WalkController.h>
 #include <cxxopts.hpp>
 
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     } else {
         RCLCPP_ERROR(rclcpp::get_logger("sim"), "Unsupported robot model: %s", modelName.c_str());
     }
-    
+
     auto& executor = machine.get_executor();
     executor.add_node(robotNode);
     executor.add_node(commNode);

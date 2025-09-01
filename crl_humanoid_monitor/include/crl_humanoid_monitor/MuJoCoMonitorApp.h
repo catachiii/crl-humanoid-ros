@@ -62,9 +62,6 @@ namespace crl::humanoid::monitor {
             // Initialize FSM overlay
             updateAvailableStates();
 
-            // Debug: Print enum values
-            RCLCPP_INFO(rclcpp::get_logger("MuJoCoMonitorApp"), "State enum values - ESTOP: %d, STAND: %d, WALK: %d",
-                      static_cast<int>(States::ESTOP), static_cast<int>(States::STAND), static_cast<int>(States::WALK));
             RCLCPP_INFO(rclcpp::get_logger("MuJoCoMonitorApp"), "MuJoCo GUI is ready. After the simulation node prints \"Start robot.\", you may connect to the robot by clicking \"C\"");
 
             // Don't auto-connect to avoid startup crashes
@@ -600,16 +597,18 @@ namespace crl::humanoid::monitor {
         void updateAvailableStates() {
             availableStates_.clear();
 
-            // Add all possible states for navigation - match simulator order
-            availableStates_.push_back(States::ESTOP);
-            availableStates_.push_back(States::STAND);
-            availableStates_.push_back(States::WALK);
+            // Dynamically add all states defined in the States enum
+            for (std::size_t i = 0; i < States::num_params; ++i) {
+                availableStates_.push_back(States::from_ind(i));
+            }
 
             // Reset selection if needed
             if (selectedTransition_ >= availableStates_.size()) {
                 selectedTransition_ = 0;
             }
-        }        void updateCurrentState() {
+        }
+
+        void updateCurrentState() {
             if (runnerNode_) {
                 try {
                     std::array<States, N> states;
@@ -653,20 +652,6 @@ namespace crl::humanoid::monitor {
                               static_cast<int>(currentState_), stateToString(currentState_),
                               static_cast<int>(targetState), stateToString(targetState));
                 }
-            }
-        }
-
-        const char* stateToString(States state) {
-            // Debug: Log the state value
-            RCLCPP_DEBUG(rclcpp::get_logger("monitor_app"), "Converting state with value: %d", static_cast<int>(state));
-
-            switch (state) {
-                case States::ESTOP: return "ESTOP";
-                case States::STAND: return "STAND";
-                case States::WALK: return "WALK";
-                default:
-                    RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(state));
-                    return "UNKNOWN";
             }
         }
 

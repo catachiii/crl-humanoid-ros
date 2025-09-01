@@ -12,15 +12,15 @@ def generate_launch_description():
     )
 
     sim_config = os.path.join(
-        get_package_share_directory("crl_g1_rlcontroller_simulator"),
+        get_package_share_directory("crl_g1_rlcontroller"),
         'config',
-        'g1_sim.yaml'
+        'g1_simulator.yaml'
     )
 
 
     return LaunchDescription([
         Node(
-            package='crl_g1_rlcontroller_simulator',
+            package='crl_g1_rlcontroller',
             namespace='g1_sim',
             executable='sim',
             parameters=[sim_config],

@@ -45,14 +45,24 @@ namespace crl::humanoid::monitor {
     // Helper function to convert state enum to string
     template<typename States>
     const char* stateToString(States state) {
-        switch (static_cast<int>(state)) {
-            case 0: return "STAND";
-            case 1: return "WALK";
-            case 2: return "RUN";
-            default:
-                RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(state));
-                return "UNKNOWN";
+        // Debug: Log the state value
+        RCLCPP_DEBUG(rclcpp::get_logger("monitor_app"), "Converting state with value: %d", static_cast<int>(state));
+
+        // Use static storage to ensure string lifetime
+        static thread_local std::string state_str;
+
+        // Dynamically handle all states defined in the enum
+        for (std::size_t i = 0; i < States::num_params; ++i) {
+            if (States::from_ind(i) == state) {
+                // Convert string_view to string and return c_str()
+                auto sv = States::from_ind(i).to_string();
+                state_str = std::string(sv);
+                return state_str.c_str();
+            }
         }
+
+        RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(state));
+        return "UNKNOWN";
     }
 
     /**
