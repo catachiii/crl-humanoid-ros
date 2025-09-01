@@ -10,13 +10,21 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <build_depend>rclcpp</build_depend>
   <build_depend>crl_humanoid_commons</build_depend>
   <build_depend>onnxruntime</build_depend>
   <build_depend>crl_humanoid_simulator</build_depend>
+  <build_depend>crl_humanoid_monitor</build_depend>
+  <build_depend>crl_fsm</build_depend>
+  <build_depend>crl_ros_helper</build_depend>
 
+  <exec_depend>rclcpp</exec_depend>
   <exec_depend>crl_humanoid_commons</exec_depend>
   <exec_depend>onnxruntime</exec_depend>
   <exec_depend>crl_humanoid_simulator</exec_depend>
+  <exec_depend>crl_humanoid_monitor</exec_depend>
+  <exec_depend>crl_fsm</exec_depend>
+  <exec_depend>crl_ros_helper</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

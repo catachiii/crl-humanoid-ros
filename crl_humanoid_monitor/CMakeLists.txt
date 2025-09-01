@@ -61,6 +61,11 @@ install(TARGETS monitor
     DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install headers
+install(DIRECTORY include/
+    DESTINATION include
+)
+
 # Install config files
 install(DIRECTORY config/
     DESTINATION share/${PROJECT_NAME}/config
@@ -73,4 +78,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm crl_ros_helper OpenGL glfw3)
+ament_export_include_directories(include)
 ament_package()

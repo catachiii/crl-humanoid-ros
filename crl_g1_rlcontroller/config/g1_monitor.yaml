@@ -1,0 +1,4 @@
+mujoco_monitor:
+  ros__parameters:
+    model: "g1"
+    robot_xml_file: "g1_description/scene_crl.xml"

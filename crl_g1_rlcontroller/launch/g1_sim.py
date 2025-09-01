@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     monitor_config = os.path.join(
-        get_package_share_directory("crl_humanoid_monitor"),
+        get_package_share_directory("crl_g1_rlcontroller"),
         'config',
         'g1_monitor.yaml'
     )
@@ -22,14 +22,14 @@ def generate_launch_description():
         Node(
             package='crl_g1_rlcontroller',
             namespace='g1_sim',
-            executable='sim',
+            executable='simulator_main',
             parameters=[sim_config],
             arguments=['--model', 'g1']
         ),
         Node(
-            package='crl_humanoid_monitor',
+            package='crl_g1_rlcontroller',
             namespace='g1_sim',
-            executable='monitor',
+            executable='monitor_main',
             parameters=[monitor_config],
             remappings=[
                 ('monitor_joystick', 'remote')
