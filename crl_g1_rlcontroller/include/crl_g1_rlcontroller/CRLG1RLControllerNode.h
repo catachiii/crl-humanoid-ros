@@ -1,14 +1,10 @@
-//
-// Created by Jin Cheng and Dongho Kang on 28.11.24.
-//
-
 #ifndef CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
 #define CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
 
 #include "crl_g1_rlcontroller/CRLG1WalkController.h"
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
 
-namespace crl::g1::rlcontroller::commons {
+namespace crl::g1::rlcontroller {
 
 
     template <typename ControllerT = CRLG1WalkController>
@@ -16,8 +12,9 @@ namespace crl::g1::rlcontroller::commons {
     public:
         using Base = crl::humanoid::commons::ControllerNode<ControllerT>;
         CRLG1RLControllerNode(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model,
-                             const std::shared_ptr<crl::humanoid::commons::RobotData>& data)
-            : Base(model, data) {
+                              const std::shared_ptr<crl::humanoid::commons::RobotData>& data,
+                              const std::string& nodeName="rlcontroller")
+            : Base(model, data, nodeName) {
             // parameters
             auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
             paramDesc.description = "G1 RL controller parameters.";
@@ -38,6 +35,6 @@ namespace crl::g1::rlcontroller::commons {
         }
     };
 
-}  // namespace crl::g1::rlcontroller::commons
+}  // namespace crl::g1::rlcontroller
 
 #endif  // CRL_G1_RLCONTROLLER_CONTROLLERNODE_H

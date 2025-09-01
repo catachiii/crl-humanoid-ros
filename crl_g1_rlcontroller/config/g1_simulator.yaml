@@ -8,10 +8,20 @@
       time_step_size: 0.02
       duration: 1.0
 
-  controller:
+  walk:
     ros__parameters:
       time_step_size: 0.01667
       model: "/models/g1_walk/g1_walk_config.json"
+
+  getup:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_getup/g1_getup_config.json"
+
+  sitdown:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_sitdown/g1_sitdown_config.json"
 
   comm:
     ros__parameters:

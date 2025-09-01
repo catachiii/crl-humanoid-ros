@@ -65,6 +65,8 @@ set(CRL_TARGET_NAME ${PROJECT_NAME}_lib)
 file(
         GLOB CRL_LIBRARY_SOURCES #
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1WalkController.cpp" #
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1GetUpController.cpp" #
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1SitDownController.cpp" #
 )
 
 # build library target

@@ -1,4 +1,4 @@
-#include "crl_g1_rlcontroller/CRLG1WalkController.h"
+#include "crl_g1_rlcontroller/CRLG1GetUpController.h"
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -7,7 +7,7 @@
 
 namespace crl::g1::rlcontroller {
 
-CRLG1WalkController::CRLG1WalkController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
+CRLG1GetUpController::CRLG1GetUpController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
                                          const std::shared_ptr<crl::humanoid::commons::RobotData> &data,
                                          const rclcpp::Logger &logger)
     : LocomotionController(model, data, logger) {
@@ -16,7 +16,7 @@ CRLG1WalkController::CRLG1WalkController(const std::shared_ptr<crl::humanoid::co
     crl::utils::resize(action_, jointCount);
 }
 
-bool CRLG1WalkController::loadModelFromFile(const std::string &fileName) {
+bool CRLG1GetUpController::loadModelFromFile(const std::string &fileName) {
     std::ifstream file(fileName);
     if (file.fail()) {
         RCLCPP_ERROR(logger_, "Failed to load RL policy configuration file: %s", fileName.c_str());
@@ -71,13 +71,12 @@ bool CRLG1WalkController::loadModelFromFile(const std::string &fileName) {
     return true;
 }
 
-void CRLG1WalkController::computeAndApplyControlSignals(double dt) {
+void CRLG1GetUpController::computeAndApplyControlSignals(double dt) {
     // Update timer
     timer += dt;
     // Get robot state
     const auto &state = data_->getRobotState();
     const auto &sensor = data_->getSensor();
-    const auto &command = data_->getCommand();
     int obsIndex = 0;
     crl::V3D angVelBody = sensor.gyroscope;
     currentObs_[obsIndex++] = angVelBody[0];
@@ -87,9 +86,6 @@ void CRLG1WalkController::computeAndApplyControlSignals(double dt) {
     currentObs_[obsIndex++] = gravityBody[0];
     currentObs_[obsIndex++] = gravityBody[1];
     currentObs_[obsIndex++] = gravityBody[2];
-    currentObs_[obsIndex++] = command.targetForwardSpeed;
-    currentObs_[obsIndex++] = command.targetSidewaysSpeed;
-    currentObs_[obsIndex++] = command.targetTurningSpeed;
     for (int i = 0; i < static_cast<int>(sensor.jointSensors.size()); i++) {
         currentObs_[obsIndex++] = sensor.jointSensors[i].jointPos - defaultJointPos_[i];
     }

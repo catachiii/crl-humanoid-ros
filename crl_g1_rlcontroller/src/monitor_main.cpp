@@ -4,7 +4,7 @@
 #include "crl_fsm/client.h"
 
 // FSM states and machines - match the G1 RL controller simulator exactly
-crl_fsm_states(States, ESTOP, STAND, WALK);
+crl_fsm_states(States, ESTOP, STAND, WALK, GETUP, SITDOWN);
 crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char ** argv)
@@ -16,8 +16,14 @@ int main(int argc, char ** argv)
   crl::fsm::Transition<States::STAND, States::WALK> t3;
   crl::fsm::Transition<States::WALK, States::ESTOP> t4;
   crl::fsm::Transition<States::WALK, States::STAND> t5;
+  crl::fsm::Transition<States::GETUP, States::ESTOP> t6;
+  crl::fsm::Transition<States::GETUP, States::STAND> t7;
+  crl::fsm::Transition<States::STAND, States::GETUP> t8;
+  crl::fsm::Transition<States::GETUP, States::WALK> t9;
+  crl::fsm::Transition<States::WALK, States::SITDOWN> t10;
+  crl::fsm::Transition<States::SITDOWN, States::STAND> t11;
 
-  constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);
+  constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11);
 
   std::array<Machines, 1> monitoring = {Machines::ONBOARD};
 

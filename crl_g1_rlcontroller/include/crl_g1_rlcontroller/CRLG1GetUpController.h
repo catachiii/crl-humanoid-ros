@@ -1,6 +1,6 @@
 
-#ifndef CRL_G1_WALKCONTROLLER_H
-#define CRL_G1_WALKCONTROLLER_H
+#ifndef CRL_G1_GETUPCONTROLLER_H
+#define CRL_G1_GETUPCONTROLLER_H
 
 #include <onnxruntime/onnxruntime_cxx_api.h>
 #include <nlohmann/json.hpp>
@@ -9,13 +9,13 @@
 
 namespace crl::g1::rlcontroller {
 
-    class CRLG1WalkController : public crl::humanoid::commons::LocomotionController {
+    class CRLG1GetUpController : public crl::humanoid::commons::LocomotionController {
     public:
-        explicit CRLG1WalkController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
+        explicit CRLG1GetUpController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
                                      const std::shared_ptr<crl::humanoid::commons::RobotData> &data,
                                      const rclcpp::Logger &logger);
 
-        ~CRLG1WalkController() override = default;
+        ~CRLG1GetUpController() override = default;
 
         bool loadModelFromFile(const std::string &fileName);
 
@@ -52,4 +52,4 @@ namespace crl::g1::rlcontroller {
 
 }  // namespace crl::g1::rlcontroller
 
-#endif  // CRL_G1_WALKCONTROLLER_H
+#endif  // CRL_G1_GETUPCONTROLLER_H
