@@ -1,5 +1,10 @@
 # crl-humanoid-ros
 
+TODOs:
+1. add hardware SDK for ROS packages
+2. add maximal velocity in the params
+
+
 Code for CRL's humanoids (unitree G1, pnd adam, limx tron1)
 
 ## Dependencies
