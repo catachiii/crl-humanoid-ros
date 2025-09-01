@@ -240,21 +240,21 @@ namespace crl::humanoid::simulator {
                 for (size_t i = 0; i < q.size() && i < this->jointCount_; ++i) {
                     // Angle limit check
                     if (q[i] > this->jointPosMax_[i]) {
-                        RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current angle %f, breached max angle %f",
+                        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current angle %f, breached max angle %f",
                                     i, sensorInput.jointSensors[i].jointName.c_str(), q[i], this->jointPosMax_[i]);
                     }
                     if (q[i] < this->jointPosMin_[i]) {
-                        RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current angle %f, breached min angle %f",
+                        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current angle %f, breached min angle %f",
                                     i, sensorInput.jointSensors[i].jointName.c_str(), q[i], this->jointPosMin_[i]);
                     }
                     // Velocity limit check
                     if (std::abs(dq[i]) > this->jointVelMax_[i]) {
-                        RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current velocity %f, breached max velocity %f",
+                        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current velocity %f, breached max velocity %f",
                                     i, sensorInput.jointSensors[i].jointName.c_str(), dq[i], this->jointVelMax_[i]);
                     }
                     // Torque limit check
                     if (std::abs(tau[i]) > this->jointTorqueMax_[i]) {
-                        RCLCPP_WARN(this->get_logger(), "Joint %zu (%s), with current torque %f, breached max torque %f",
+                        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current torque %f, breached max torque %f",
                                     i, sensorInput.jointSensors[i].jointName.c_str(), tau[i], this->jointTorqueMax_[i]);
                     }
                 }

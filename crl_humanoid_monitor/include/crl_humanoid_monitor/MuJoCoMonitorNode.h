@@ -39,6 +39,7 @@
 #include <mutex>
 #include <chrono>
 #include <cmath>
+#include <algorithm>
 
 namespace crl::humanoid::monitor {
 
@@ -394,6 +395,45 @@ namespace crl::humanoid::monitor {
                 RCLCPP_ERROR(this->get_logger(), "Exception during state transition: %s", e.what());
                 throw;
             }
+        }
+
+        /**
+         * Set command speed values directly.
+         */
+        void setCommand(double forwardSpeed, double sidewaysSpeed, double turningSpeed) {
+            commandUI_.targetForwardSpeed = forwardSpeed;
+            commandUI_.targetSidewaysSpeed = sidewaysSpeed;
+            commandUI_.targetTurningSpeed = turningSpeed;
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
+         * Increment command speed values by the given deltas.
+         */
+        void incrementCommand(double deltaForward, double deltaSideways, double deltaTurning) {
+            commandUI_.targetForwardSpeed += deltaForward;
+            commandUI_.targetSidewaysSpeed += deltaSideways;
+            commandUI_.targetTurningSpeed += deltaTurning;
+
+            // Clamp values to reasonable limits
+            const double maxForwardSpeed = 1.0; // m/s
+            const double maxSidewaysSpeed = 1.0; // m/s
+            const double maxTurningSpeed = 1.0; // rad/s
+
+            commandUI_.targetForwardSpeed = std::clamp(commandUI_.targetForwardSpeed, -maxForwardSpeed, maxForwardSpeed);
+            commandUI_.targetSidewaysSpeed = std::clamp(commandUI_.targetSidewaysSpeed, -maxSidewaysSpeed, maxSidewaysSpeed);
+            commandUI_.targetTurningSpeed = std::clamp(commandUI_.targetTurningSpeed, -maxTurningSpeed, maxTurningSpeed);
+
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
+         * Get current command values.
+         */
+        crl::humanoid::commons::RobotCommand getCommand() const {
+            return commandUI_;
         }
 
     protected:

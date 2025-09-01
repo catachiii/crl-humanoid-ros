@@ -14,6 +14,8 @@
 #include <chrono>
 #include <thread>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 
 #include "crl_humanoid_monitor/MuJoCoMonitorNode.h"
 
@@ -227,8 +229,8 @@ namespace crl::humanoid::monitor {
                         // Toggle FSM overlay
                         showFsmOverlay_ = !showFsmOverlay_;
                         break;
-                    case GLFW_KEY_E:
-                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "E key pressed - Toggle Elastic Band");
+                    case GLFW_KEY_B:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "B key pressed - Toggle Elastic Band");
                         // Toggle elastic band support
                         if (runnerNode_) {
                             runnerNode_->toggleElasticBand();
@@ -266,6 +268,49 @@ namespace crl::humanoid::monitor {
                     case GLFW_KEY_ESCAPE:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "ESC key pressed - Exit");
                         glfwSetWindowShouldClose(window_, GLFW_TRUE);
+                        break;
+                    // Robot movement controls (WASD + QE)
+                    case GLFW_KEY_W:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "W key pressed - Forward");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(0.1, 0.0, 0.0); // Forward
+                        }
+                        break;
+                    case GLFW_KEY_S:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "S key pressed - Backward");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(-0.1, 0.0, 0.0); // Backward
+                        }
+                        break;
+                    case GLFW_KEY_A:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "A key pressed - Left");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(0.0, 0.1, 0.0); // Left
+                        }
+                        break;
+                    case GLFW_KEY_D:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "D key pressed - Right");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(0.0, -0.1, 0.0); // Right
+                        }
+                        break;
+                    case GLFW_KEY_Q:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "Q key pressed - Turn Left");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(0.0, 0.0, 0.1); // Turn left
+                        }
+                        break;
+                    case GLFW_KEY_E:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "E key pressed - Turn Right");
+                        if (runnerNode_) {
+                            runnerNode_->incrementCommand(0.0, 0.0, -0.1); // Turn right
+                        }
+                        break;
+                    case GLFW_KEY_X:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "X key pressed - Stop (Reset Commands)");
+                        if (runnerNode_) {
+                            runnerNode_->setCommand(0.0, 0.0, 0.0); // Stop all movement
+                        }
                         break;
                 }
             }
@@ -469,8 +514,8 @@ namespace crl::humanoid::monitor {
             glColor4f(0.0f, 0.0f, 0.0f, 0.7f); // Semi-transparent black
             glVertex2f(10, 10);
             glVertex2f(380, 10);
-            glVertex2f(380, 400); // Increased height to accommodate elastic band and camera follow info
-            glVertex2f(10, 400);
+            glVertex2f(380, 520); // Increased height to accommodate all controls
+            glVertex2f(10, 520);
             glEnd();
 
             // Draw connection status indicator
@@ -530,7 +575,7 @@ namespace crl::humanoid::monitor {
 
                     // Show elastic band status and control
                     bool elasticBandEnabled = runnerNode_ ? runnerNode_->isElasticBandEnabled() : false;
-                    std::string elasticText = "E - Elastic Band: " + std::string(elasticBandEnabled ? "ON" : "OFF");
+                    std::string elasticText = "B - Elastic Band: " + std::string(elasticBandEnabled ? "ON" : "OFF");
                     mjr_text(mjFONT_NORMAL, elasticText.c_str(), &context,
                              20.0f / width, 1.0f - 195.0f / height,
                              elasticBandEnabled ? 0.0f : 0.8f, elasticBandEnabled ? 1.0f : 0.8f, 0.8f);
@@ -545,21 +590,53 @@ namespace crl::humanoid::monitor {
                              20.0f / width, 1.0f - 245.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    // Mouse controls section
-                    mjr_text(mjFONT_NORMAL, "MOUSE CONTROLS:", &context,
+                    // Movement controls section
+                    mjr_text(mjFONT_NORMAL, "MOVEMENT CONTROLS:", &context,
                              20.0f / width, 1.0f - 280.0f / height,
                              1.0f, 1.0f, 1.0f);
 
-                    mjr_text(mjFONT_NORMAL, "Left Mouse - Rotate Camera", &context,
+                    mjr_text(mjFONT_NORMAL, "W/S - Forward/Backward", &context,
                              20.0f / width, 1.0f - 305.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "Middle Mouse - Pan Camera", &context,
+                    mjr_text(mjFONT_NORMAL, "A/D - Strafe Left/Right", &context,
                              20.0f / width, 1.0f - 330.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "Scroll Wheel - Zoom", &context,
+                    mjr_text(mjFONT_NORMAL, "Q/E - Turn Left/Right", &context,
                              20.0f / width, 1.0f - 355.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "X - Stop (Reset Commands)", &context,
+                             20.0f / width, 1.0f - 380.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    // Current command display
+                    auto command = runnerNode_->getCommand();
+                    std::ostringstream cmdStream;
+                    cmdStream << std::fixed << std::setprecision(2);
+                    cmdStream << "Current CMD: F=" << command.targetForwardSpeed
+                              << " S=" << command.targetSidewaysSpeed
+                              << " T=" << command.targetTurningSpeed;
+                    mjr_text(mjFONT_NORMAL, cmdStream.str().c_str(), &context,
+                             20.0f / width, 1.0f - 405.0f / height,
+                             0.0f, 1.0f, 1.0f); // Cyan color
+
+                    // Mouse controls section
+                    mjr_text(mjFONT_NORMAL, "MOUSE CONTROLS:", &context,
+                             20.0f / width, 1.0f - 440.0f / height,
+                             1.0f, 1.0f, 1.0f);
+
+                    mjr_text(mjFONT_NORMAL, "Left Mouse - Rotate Camera", &context,
+                             20.0f / width, 1.0f - 465.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "Middle Mouse - Pan Camera", &context,
+                             20.0f / width, 1.0f - 490.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "Scroll Wheel - Zoom", &context,
+                             20.0f / width, 1.0f - 515.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // FSM overlay
@@ -586,7 +663,7 @@ namespace crl::humanoid::monitor {
                              20.0f / width, 0.0f / height,
                              1.0f, 1.0f, 0.0f);
                 } catch (const std::exception& e) {
-                    // Silently ignore FPS display errors
+                    // Silently ignore display errors
                 }
             }
 
