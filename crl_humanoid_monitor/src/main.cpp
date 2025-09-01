@@ -24,7 +24,7 @@ int main(int argc, char ** argv)
   // Initialize ROS2
   rclcpp::init(argc, argv);
   // Create and run the MuJoCo monitor app
-  auto app = crl::unitree::monitor::make_mujoco_monitor_app<States, Machines, decltype(t_cols), 1>(
+  auto app = crl::humanoid::monitor::make_mujoco_monitor_app<States, Machines, decltype(t_cols), 1>(
     "robot", t_cols, monitoring);
   app.run();
   rclcpp::shutdown();

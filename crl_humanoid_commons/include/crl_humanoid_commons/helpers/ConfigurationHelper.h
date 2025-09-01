@@ -2,13 +2,13 @@
 // Created by Dongho Kang on 30.11.21.
 //
 
-#ifndef CRLUNITREE_CONFIGURATIONHELPER_H
-#define CRLUNITREE_CONFIGURATIONHELPER_H
+#ifndef CRLHUMANOID_CONFIGURATIONHELPER_H
+#define CRLHUMANOID_CONFIGURATIONHELPER_H
 
 #include "rclcpp/rclcpp.hpp"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
-#endif  //CRLUNITREE_CONFIGURATIONHELPER_H
+#endif  //CRLHUMANOID_CONFIGURATIONHELPER_H

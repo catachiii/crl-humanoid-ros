@@ -6,9 +6,9 @@
 
 #include "crl_humanoid_commons/helpers/MessageHelper.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
-    CommNode::CommNode(const UnitreeRobotModel& model, const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data)
+    CommNode::CommNode(const std::shared_ptr<RobotModel>& model, const std::shared_ptr<RobotData>& data)
             : BaseNode(model, data, "comm") {
         // load configuration
         auto queueSizeParamDesc = rcl_interfaces::msg::ParameterDescriptor{};
@@ -51,7 +51,7 @@ namespace crl::unitree::commons {
         populateRemoteMessageFromData(command, message.remote);
         const auto& sensorData = data_->getSensor();
         populateSensorMessageFromData(sensorData, message.sensor);
-        const auto& stateData = data_->getLeggedRobotState();
+        const auto& stateData = data_->getRobotState();
         populateStateMessageFromData(stateData, message.state);
         const auto& controlData = data_->getControlSignal();
         populateControlMessageFromData(controlData, message.control);
@@ -64,8 +64,8 @@ namespace crl::unitree::commons {
 
     void CommNode::remoteSubscriptionCallback(const crl_humanoid_msgs::msg::Remote::SharedPtr msg) {
         auto comm = data_->getCommand();
-        crl::unitree::commons::populateDataFromRemoteMessage(*msg, comm);
+        crl::humanoid::commons::populateDataFromRemoteMessage(*msg, comm);
         data_->setCommand(comm);
     }
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons

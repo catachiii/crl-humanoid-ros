@@ -1,17 +1,16 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>crl_fsm</name>
+  <name>crl_g1_rlcontroller_simulator</name>
   <version>0.1.0</version>
-  <description>A finite state machine implementation for robots</description>
-  <maintainer email="zijhui@student.ethz.ch">zijhui</maintainer>
+  <description>ROS package for Unitree G1 RL Simulation.</description>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
   <license>ETH Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>crl_fsm_msgs</depend>
-  <depend>crl_ros_helper</depend>
+  <build_depend>crl_humanoid_simulator</build_depend>
+  <build_depend>crl_g1_rlcontroller_commons</build_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

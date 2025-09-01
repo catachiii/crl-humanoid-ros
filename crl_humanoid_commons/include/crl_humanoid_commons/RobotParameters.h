@@ -11,13 +11,13 @@
 
 #include "crl-basic/utils/mathDefs.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
     enum class RobotModelType {
         UNKNOWN = -1, UNITREE_G1 = 0
     };
 
-    struct UnitreeRobotModel {
+    struct RobotModel {
         RobotModelType modelType = RobotModelType::UNKNOWN;
         std::vector<std::string> jointNames;  // joint names
         std::vector<double> defaultJointConf;  // used mainly for the default standing posture.
@@ -29,7 +29,7 @@ namespace crl::unitree::commons {
         std::vector<double> jointDampingDefault;  // used in pos mode and estop
     };
 
-    const std::map<std::string, UnitreeRobotModel> robotModels = {
+    const std::map<std::string, RobotModel> robotModels = {
             {// unitree G1
                     "G1",
                     {
@@ -182,6 +182,6 @@ namespace crl::unitree::commons {
             },
     };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif  //CRL_HUMANOID_COMMONS_ROBOTPARAMETERS_H

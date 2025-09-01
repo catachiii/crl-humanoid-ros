@@ -40,7 +40,7 @@
 #include <chrono>
 #include <cmath>
 
-namespace crl::unitree::monitor {
+namespace crl::humanoid::monitor {
 
     // Helper function to convert state enum to string
     template<typename States>
@@ -49,7 +49,9 @@ namespace crl::unitree::monitor {
             case 0: return "STAND";
             case 1: return "WALK";
             case 2: return "RUN";
-            default: return "UNKNOWN";
+            default:
+                RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(state));
+                return "UNKNOWN";
         }
     }
 
@@ -57,10 +59,10 @@ namespace crl::unitree::monitor {
      * MuJoCo-based monitor node for visualizing robot state using MuJoCo's GUI.
      * This is a pure viewer that subscribes to ROS2 topics and renders the robot state.
      */
-    template <typename States, typename Machines, typename TransitionsCont, std::size_t N, typename LeggedRobotDataType>
+    template <typename States, typename Machines, typename TransitionsCont, std::size_t N, typename RobotDataType>
     class BaseMuJoCoMonitorNode : public crl::ros::Node {
-        static_assert(std::is_convertible<LeggedRobotDataType*, crl::unitree::commons::UnitreeLeggedRobotData*>::value,
-                      "LeggedRobotDataType must inherit crl::unitree::commons::UnitreeLeggedRobotData as public");
+        static_assert(std::is_convertible<RobotDataType*, crl::humanoid::commons::RobotData*>::value,
+                      "RobotDataType must inherit crl::humanoid::commons::RobotData as public");
 
     public:
         BaseMuJoCoMonitorNode(const std::string& to_monitor, const TransitionsCont& trans_cont, const std::array<Machines, N>& monitoring,
@@ -103,13 +105,13 @@ namespace crl::unitree::monitor {
 
             // get model type
             if (this->get_parameter("model").as_string() == "g1") {
-                modelType_ = crl::unitree::commons::RobotModelType::UNITREE_G1;
+                modelType_ = crl::humanoid::commons::RobotModelType::UNITREE_G1;
             } else {
                 RCLCPP_WARN(this->get_logger(), "Unknown model type");
                 return false;
             }
 
-            data_ = std::make_shared<LeggedRobotDataType>();
+            data_ = std::make_shared<RobotDataType>();
 
             // Initialize topic subscriptions
             monitorSubscription_ = this->create_safe_subscription<crl_humanoid_msgs::msg::Monitor>(
@@ -202,8 +204,8 @@ namespace crl::unitree::monitor {
                     return;
                 }
 
-                // Send FSM state change to ESTOP (restart)
-                fsmClient_.broadcast_switch(States::ESTOP);
+                // // Send FSM state change to ESTOP (restart)
+                // fsmClient_.broadcast_switch(States::ESTOP);
 
                 // Reset UI command values
                 commandUI_.targetForwardSpeed = 0;
@@ -323,7 +325,7 @@ namespace crl::unitree::monitor {
 
             try {
                 if (data_) {
-                    auto state = data_->getLeggedRobotState();
+                    auto state = data_->getRobotState();
                     position[0] = state.basePosition.x;
                     position[1] = state.basePosition.y;
                     position[2] = state.basePosition.z;
@@ -426,9 +428,9 @@ namespace crl::unitree::monitor {
             if (!data_ || !mujocoModel_ || !mujocoData_) return;
 
             // Safely get robot state with exception handling
-            crl::unitree::commons::LeggedRobotState state;
+            crl::humanoid::commons::RobotState state;
             try {
-                state = data_->getLeggedRobotState();
+                state = data_->getRobotState();
             } catch (const std::exception& e) {
                 RCLCPP_WARN(this->get_logger(), "Failed to get robot state during MuJoCo update: %s", e.what());
                 return;
@@ -574,28 +576,28 @@ namespace crl::unitree::monitor {
                 data_->timeStamp = t;
 
                 // Update command
-                crl::unitree::commons::LeggedRobotCommand command;
-                crl::unitree::commons::populateDataFromRemoteMessage(msg->remote, command);
+                crl::humanoid::commons::RobotCommand command;
+                crl::humanoid::commons::populateDataFromRemoteMessage(msg->remote, command);
                 data_->setCommand(command);
 
                 // Update sensor values
                 auto sensor = data_->getSensor();
-                crl::unitree::commons::populateDataFromSensorMessage(msg->sensor, sensor);
+                crl::humanoid::commons::populateDataFromSensorMessage(msg->sensor, sensor);
                 data_->setSensor(sensor);
 
                 // Update state estimation
-                auto state = data_->getLeggedRobotState();
-                crl::unitree::commons::populateDataFromStateMessage(msg->state, state);
-                data_->setLeggedRobotState(state);
+                auto state = data_->getRobotState();
+                crl::humanoid::commons::populateDataFromStateMessage(msg->state, state);
+                data_->setRobotState(state);
 
                 // Update control
                 auto control = data_->getControlSignal();
-                crl::unitree::commons::populateDataFromControlMessage(msg->control, control);
+                crl::humanoid::commons::populateDataFromControlMessage(msg->control, control);
                 data_->setControlSignal(control);
 
                 // Update profiling info
                 auto profilingInfo = data_->getProfilingInfo();
-                crl::unitree::commons::populateDataFromProfilingInfoMessage(msg->profiling_info, profilingInfo);
+                crl::humanoid::commons::populateDataFromProfilingInfoMessage(msg->profiling_info, profilingInfo);
                 data_->setProfilingInfo(profilingInfo);
 
                 // Publish remote commands
@@ -616,7 +618,7 @@ namespace crl::unitree::monitor {
 
                 // Publish remote topic
                 auto message = crl_humanoid_msgs::msg::Remote();
-                crl::unitree::commons::populateRemoteMessageFromData(commandUI_, message);
+                crl::humanoid::commons::populateRemoteMessageFromData(commandUI_, message);
                 remotePublisher_->publish(message);
             } catch (const std::exception& e) {
                 RCLCPP_WARN(this->get_logger(), "Exception in publishRemoteCommands: %s", e.what());
@@ -633,10 +635,10 @@ namespace crl::unitree::monitor {
 
     protected:
         // Robot model
-        crl::unitree::commons::RobotModelType modelType_ = crl::unitree::commons::RobotModelType::UNKNOWN;
+        crl::humanoid::commons::RobotModelType modelType_ = crl::humanoid::commons::RobotModelType::UNKNOWN;
 
         // Data pipeline
-        std::shared_ptr<LeggedRobotDataType> data_ = nullptr;
+        std::shared_ptr<RobotDataType> data_ = nullptr;
         std::mutex dataMutex_;
 
         // FSM
@@ -651,7 +653,7 @@ namespace crl::unitree::monitor {
 
     private:
         // Remote command set by UI
-        crl::unitree::commons::LeggedRobotCommand commandUI_;
+        crl::humanoid::commons::RobotCommand commandUI_;
 
         // Topic communication
         rclcpp::Subscription<crl_humanoid_msgs::msg::Monitor>::SharedPtr monitorSubscription_ = nullptr;
@@ -675,25 +677,25 @@ namespace crl::unitree::monitor {
         mjrContext context_;
 
         // Type definitions for data structures
-        typedef crl::unitree::commons::LeggedRobotState State;
-        typedef std::vector<crl::unitree::commons::LeggedRobotSensor::LeggedRobotJointSensor> JointSensors;
-        typedef std::vector<State::LeggedRobotJointState> JointStates;
-        typedef std::vector<crl::unitree::commons::LeggedRobotControlSignal::LeggedRobotJointControlSignal> JointControl;
-        typedef crl::unitree::commons::ProfilingInfo ProfilingInfo;
+        typedef crl::humanoid::commons::RobotState State;
+        typedef std::vector<crl::humanoid::commons::RobotSensor::RobotJointSensor> JointSensors;
+        typedef std::vector<State::RobotJointState> JointStates;
+        typedef std::vector<crl::humanoid::commons::RobotControlSignal::RobotJointControlSignal> JointControl;
+        typedef crl::humanoid::commons::ProfilingInfo ProfilingInfo;
     };
 
     /**
      * Default MuJoCo monitor node.
      */
     template <typename States, typename Machines, typename TransitionsCont, std::size_t N>
-    class UnitreeMuJoCoMonitorNode final : public BaseMuJoCoMonitorNode<States, Machines, TransitionsCont, N, crl::unitree::commons::UnitreeLeggedRobotData> {
-        using BaseRobotNode = BaseMuJoCoMonitorNode<States, Machines, TransitionsCont, N, crl::unitree::commons::UnitreeLeggedRobotData>;
+    class MuJoCoMonitorNode final : public BaseMuJoCoMonitorNode<States, Machines, TransitionsCont, N, crl::humanoid::commons::RobotData> {
+        using BaseRobotNode = BaseMuJoCoMonitorNode<States, Machines, TransitionsCont, N, crl::humanoid::commons::RobotData>;
 
     public:
-        UnitreeMuJoCoMonitorNode(const std::string& to_monitor, const TransitionsCont& trans_cont, const std::array<Machines, N>& monitoring)
+        MuJoCoMonitorNode(const std::string& to_monitor, const TransitionsCont& trans_cont, const std::array<Machines, N>& monitoring)
             : BaseRobotNode(to_monitor, trans_cont, monitoring) {}
 
-        ~UnitreeMuJoCoMonitorNode() override = default;
+        ~MuJoCoMonitorNode() override = default;
     };
 
-}  // namespace crl::unitree::monitor
+}  // namespace crl::humanoid::monitor

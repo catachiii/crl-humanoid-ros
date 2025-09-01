@@ -4,18 +4,18 @@
 
 #include "crl_humanoid_commons/nodes/EstopNode.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
-    EstopNode::EstopNode(const UnitreeRobotModel &model,
-                         const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData> &data)
+    EstopNode::EstopNode(const std::shared_ptr<RobotModel> &model,
+                         const std::shared_ptr<RobotData> &data)
             : BaseNode(model, data, "estop") {
         // parameters
         auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
         paramDesc.read_only = true;
         paramDesc.description = "estop parameters";
-        this->declare_parameter<std::vector<double>>("joint_damping", std::vector<double>(model.defaultJointConf.size(), 0.0), paramDesc);
+        this->declare_parameter<std::vector<double>>("joint_damping", std::vector<double>(model->defaultJointConf.size(), 0.0), paramDesc);
 
-        jointCount_ = model.defaultJointConf.size();
+        jointCount_ = model->defaultJointConf.size();
         // stiffness and damping
         crl::resize(jointDamping_, jointCount_);
         // init joint stiffness and damping
@@ -33,9 +33,9 @@ namespace crl::unitree::commons {
         data_->setCommand(comm);
 
         // reset control input to zero
-        crl::unitree::commons::LeggedRobotControlSignal control = data_->getControlSignal();
+        RobotControlSignal control = data_->getControlSignal();
         for (size_t i = 0; i < control.jointControl.size(); i++) {
-            control.jointControl[i].mode = crl::unitree::commons::RBJointControlMode::FORCE_MODE;
+            control.jointControl[i].mode = RBJointControlMode::FORCE_MODE;
             control.jointControl[i].desiredPos = 0;
             control.jointControl[i].desiredSpeed = 0;
             control.jointControl[i].desiredTorque = 0;
@@ -49,10 +49,10 @@ namespace crl::unitree::commons {
     EstopNode::~EstopNode() {
         // reset control input to hold current position
         // this is necessary to prevent jumping while the state transition happens
-        crl::unitree::commons::LeggedRobotState state = data_->getLeggedRobotState();
-        crl::unitree::commons::LeggedRobotControlSignal control = data_->getControlSignal();
+        crl::humanoid::commons::RobotState state = data_->getRobotState();
+        crl::humanoid::commons::RobotControlSignal control = data_->getControlSignal();
         for (size_t i = 0; i < control.jointControl.size(); i++) {
-            control.jointControl[i].mode = crl::unitree::commons::RBJointControlMode::POSITION_MODE;
+            control.jointControl[i].mode = crl::humanoid::commons::RBJointControlMode::POSITION_MODE;
             control.jointControl[i].desiredPos = state.jointStates[i].jointPos;
             control.jointControl[i].desiredSpeed = 0;
             control.jointControl[i].desiredTorque = 0;
@@ -70,4 +70,4 @@ namespace crl::unitree::commons {
         data_->setProfilingInfo(profileInfo);
     }
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons

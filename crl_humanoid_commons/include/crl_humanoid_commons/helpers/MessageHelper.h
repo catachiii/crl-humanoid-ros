@@ -2,8 +2,8 @@
 // Created by Dongho Kang on 14.06.21.
 //
 
-#ifndef CRLUNITREE_MESSAGEHELPER_H
-#define CRLUNITREE_MESSAGEHELPER_H
+#ifndef CRLHUMANOID_MESSAGEHELPER_H
+#define CRLHUMANOID_MESSAGEHELPER_H
 
 #include "crl_humanoid_commons/RobotData.h"
 #include "crl_humanoid_msgs/msg/control.hpp"
@@ -12,7 +12,7 @@
 #include "crl_humanoid_msgs/msg/sensor.hpp"
 #include "crl_humanoid_msgs/msg/state.hpp"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
     inline void populatePointFromP3D(const crl::P3D& p3d, geometry_msgs::msg::Point& point) {
         point.x = p3d.x;
@@ -66,19 +66,19 @@ namespace crl::unitree::commons {
         v3d.z() = covariance[14];
     }
 
-    inline void populateRemoteMessageFromData(const crl::unitree::commons::LeggedRobotCommand& data, crl_humanoid_msgs::msg::Remote& remote) {
+    inline void populateRemoteMessageFromData(const RobotCommand& data, crl_humanoid_msgs::msg::Remote& remote) {
         remote.speed_forward = data.targetForwardSpeed;
         remote.speed_sideways = data.targetSidewaysSpeed;
         remote.speed_turning = data.targetTurningSpeed;
     }
 
-    inline void populateDataFromRemoteMessage(const crl_humanoid_msgs::msg::Remote& remote, crl::unitree::commons::LeggedRobotCommand& data) {
+    inline void populateDataFromRemoteMessage(const crl_humanoid_msgs::msg::Remote& remote, RobotCommand& data) {
         data.targetForwardSpeed = remote.speed_forward;
         data.targetSidewaysSpeed = remote.speed_sideways;
         data.targetTurningSpeed = remote.speed_turning;
     }
 
-    inline void populateSensorMessageFromData(const crl::unitree::commons::LeggedRobotSensor& data, crl_humanoid_msgs::msg::Sensor& sensor) {
+    inline void populateSensorMessageFromData(const RobotSensor& data, crl_humanoid_msgs::msg::Sensor& sensor) {
         populateVectorFromV3D(data.accelerometer, sensor.imu.linear_acceleration);
         populateVectorFromV3D(data.gyroscope, sensor.imu.angular_velocity);
         populateQuaternionFromQuaternion(data.imuOrientation, sensor.imu.orientation);
@@ -95,7 +95,7 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateDataFromSensorMessage(const crl_humanoid_msgs::msg::Sensor& sensor, crl::unitree::commons::LeggedRobotSensor& data) {
+    inline void populateDataFromSensorMessage(const crl_humanoid_msgs::msg::Sensor& sensor, RobotSensor& data) {
         populateV3DFromVector(sensor.imu.linear_acceleration, data.accelerometer);
         populateV3DFromVector(sensor.imu.angular_velocity, data.gyroscope);
         populateQuaternionFromQuaternion(sensor.imu.orientation, data.imuOrientation);
@@ -109,7 +109,7 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateStateMessageFromData(const crl::unitree::commons::LeggedRobotState& data, crl_humanoid_msgs::msg::State& state) {
+    inline void populateStateMessageFromData(const RobotState& data, crl_humanoid_msgs::msg::State& state) {
         populatePointFromP3D(data.basePosition, state.base_pose.pose.position);
         populateQuaternionFromQuaternion(data.baseOrientation, state.base_pose.pose.orientation);
         populateVectorFromV3D(data.baseVelocity, state.base_twist.twist.linear);
@@ -126,7 +126,7 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateDataFromStateMessage(const crl_humanoid_msgs::msg::State& state, crl::unitree::commons::LeggedRobotState& data) {
+    inline void populateDataFromStateMessage(const crl_humanoid_msgs::msg::State& state, RobotState& data) {
         populateP3DFromPoint(state.base_pose.pose.position, data.basePosition);
         populateQuaternionFromQuaternion(state.base_pose.pose.orientation, data.baseOrientation);
         populateV3DFromVector(state.base_twist.twist.linear, data.baseVelocity);
@@ -141,7 +141,7 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateControlMessageFromData(const crl::unitree::commons::LeggedRobotControlSignal& data, crl_humanoid_msgs::msg::Control& control) {
+    inline void populateControlMessageFromData(const RobotControlSignal& data, crl_humanoid_msgs::msg::Control& control) {
         int nj = data.jointControl.size();
         control.joint.position.resize(nj);
         control.joint.velocity.resize(nj);
@@ -161,12 +161,12 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateDataFromControlMessage(const crl_humanoid_msgs::msg::Control& control, crl::unitree::commons::LeggedRobotControlSignal& data) {
+    inline void populateDataFromControlMessage(const crl_humanoid_msgs::msg::Control& control, RobotControlSignal& data) {
         int nj = control.joint.name.size();
         data.jointControl.resize(nj);
         for (int i = 0; i < nj; i++) {
             data.jointControl[i].name = control.joint.name[i];
-            data.jointControl[i].mode = static_cast<crl::unitree::commons::RBJointControlMode>(control.joint.mode[i]);
+            data.jointControl[i].mode = static_cast<RBJointControlMode>(control.joint.mode[i]);
             data.jointControl[i].desiredPos = control.joint.position[i];
             data.jointControl[i].desiredSpeed = control.joint.velocity[i];
             data.jointControl[i].desiredTorque = control.joint.effort[i];
@@ -175,17 +175,17 @@ namespace crl::unitree::commons {
         }
     }
 
-    inline void populateProfilingInfoMessageFromData(const crl::unitree::commons::ProfilingInfo& data, crl_humanoid_msgs::msg::ProfilingInfo& profilingInfo) {
+    inline void populateProfilingInfoMessageFromData(const ProfilingInfo& data, crl_humanoid_msgs::msg::ProfilingInfo& profilingInfo) {
         profilingInfo.main_execution_time = data.mainExecutionTime;
         profilingInfo.comm_execution_time = data.communicationExecutionTime;
         profilingInfo.cont_execution_time = data.controllerExecutionTime;
     }
 
-    inline void populateDataFromProfilingInfoMessage(const crl_humanoid_msgs::msg::ProfilingInfo& profilingInfo, crl::unitree::commons::ProfilingInfo& data) {
+    inline void populateDataFromProfilingInfoMessage(const crl_humanoid_msgs::msg::ProfilingInfo& profilingInfo, ProfilingInfo& data) {
         data.mainExecutionTime = profilingInfo.main_execution_time;
         data.communicationExecutionTime = profilingInfo.comm_execution_time;
         data.controllerExecutionTime = profilingInfo.cont_execution_time;
     }
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
-#endif  //CRLUNITREE_MESSAGEHELPER_H
+#endif  //CRLHUMANOID_MESSAGEHELPER_H

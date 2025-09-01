@@ -1,7 +1,3 @@
-//
-// Created by donghok on 23.06.21.
-//
-
 #include <crl_fsm/fsm.h>
 #include <crl_humanoid_commons/RobotData.h>
 #include <crl_humanoid_commons/nodes/ControllerNode.h>
@@ -9,8 +5,10 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_simulator/G1SimNode.h>
-#include <rclcpp/rclcpp.hpp>
+#include <crl_g1_rlcontroller_commons/CRLG1RLControllerNode.h>
+#include <crl_g1_rlcontroller_commons/CRLG1WalkController.h>
 #include <cxxopts.hpp>
+
 
 crl_fsm_states(States, ESTOP, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
@@ -45,20 +43,17 @@ int main(int argc, char** argv) {
     auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
         [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
     auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
-        [&]() { return std::make_shared<crl::humanoid::commons::ControllerNode<>>(model, data); });
+        [&]() { return std::make_shared<crl::g1::rlcontroller::commons::CRLG1RLControllerNode<crl::g1::rlcontroller::commons::CRLG1WalkController>>(model, data); });
 
     auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3);
     constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);
 
-    // Initialize ROS2
-    rclcpp::init(argc, argv);
-
     // init ros process
+    rclcpp::init(argc, argv);
     auto machine = crl::fsm::make_fsm<Machines, Machines::ONBOARD>("robot", States::ESTOP, s_cols, t_cols);
 
     std::array<Machines, 1> monitoring = {Machines::ONBOARD};
 
-    // Create robot node (MuJoCo simulation is integrated into SimNode)
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
     std::shared_ptr<crl::humanoid::simulator::G1SimNode<States, Machines, 1>> robotNode;
     if (modelName == "G1") {
@@ -66,14 +61,14 @@ int main(int argc, char** argv) {
     } else {
         RCLCPP_ERROR(rclcpp::get_logger("sim"), "Unsupported robot model: %s", modelName.c_str());
     }
-
+    
     auto& executor = machine.get_executor();
     executor.add_node(robotNode);
     executor.add_node(commNode);
 
-    // Start the FSM machine (this will handle the simulation loop)
+    // main loop
     machine.spin();
 
+    // clean up
     rclcpp::shutdown();
-    return 0;
 }

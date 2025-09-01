@@ -2,8 +2,8 @@
 // Created by Dongho Kang on 21.01.22.
 //
 
-#ifndef CRL_HUMANOID_UNITREELEGGEDROBOTDATA_H
-#define CRL_HUMANOID_UNITREELEGGEDROBOTDATA_H
+#ifndef CRL_HUMANOID_ROBOTDATA_H
+#define CRL_HUMANOID_ROBOTDATA_H
 
 #include <atomic>
 #include <mutex>
@@ -12,7 +12,7 @@
 #include "crl-basic/utils/mathDefs.h"
 #include "crl_humanoid_commons/RobotParameters.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
     enum class RBJointControlMode {
         PASSIVE_MODE = 0,
         POSITION_MODE,
@@ -23,7 +23,7 @@ namespace crl::unitree::commons {
     /**
      * user command
      */
-    struct LeggedRobotCommand {
+    struct RobotCommand {
         double targetForwardSpeed = 0;
         double targetSidewaysSpeed = 0;
         double targetTurningSpeed = 0;
@@ -32,7 +32,7 @@ namespace crl::unitree::commons {
     /**
      * sensor values
      */
-    struct LeggedRobotSensor {
+    struct RobotSensor {
         // accelerometer = Rbw * (a-g)
         V3D accelerometer = V3D(0, 0, 0);
         // gyroscope = Rbw * w
@@ -40,20 +40,20 @@ namespace crl::unitree::commons {
         // imu often has its own mechanism to estimate orientation
         Quaternion imuOrientation = Quaternion::Identity();
 
-        struct LeggedRobotJointSensor {
+        struct RobotJointSensor {
             std::string jointName;
             double jointPos;     // rad
             double jointVel;     // rad/s
             double jointTorque;  // N.m
         };
-        std::vector<LeggedRobotJointSensor> jointSensors;
+        std::vector<RobotJointSensor> jointSensors;
     };
 
 
     /**
      * full state and estimation info
      */
-    struct LeggedRobotState {
+    struct RobotState {
         P3D basePosition = P3D(0, 0, 0);
         V3D basePositionCov = V3D(0, 0, 0); // covariance of base position
         V3D baseVelocity = V3D(0, 0, 0);
@@ -63,16 +63,16 @@ namespace crl::unitree::commons {
         V3D baseAngularVelocity = V3D(0, 0, 0);
         V3D baseAngularVelocityCov = V3D(0, 0, 0); // covariance of base angular velocity
 
-        struct LeggedRobotJointState {
+        struct RobotJointState {
             std::string jointName;
             double jointPos;  // rad
             double jointVel;  // rad/s
         };
-        std::vector<LeggedRobotJointState> jointStates;
+        std::vector<RobotJointState> jointStates;
     };
 
-    struct LeggedRobotControlSignal {
-        struct LeggedRobotJointControlSignal {
+    struct RobotControlSignal {
+        struct RobotJointControlSignal {
             std::string name;
             RBJointControlMode mode = RBJointControlMode::PASSIVE_MODE;
             double desiredPos = 0;
@@ -81,7 +81,7 @@ namespace crl::unitree::commons {
             double stiffness = 0;
             double damping = 0;
         };
-        std::vector<LeggedRobotJointControlSignal> jointControl;
+        std::vector<RobotJointControlSignal> jointControl;
     };
 
     struct ProfilingInfo {
@@ -90,16 +90,16 @@ namespace crl::unitree::commons {
         double controllerExecutionTime = 0;
     };
 
-    class UnitreeLeggedRobotData {
+    class RobotData {
     public:
         std::atomic<double> timeStamp{0};
         std::atomic<bool> softEStop{false};
 
     protected:
-        LeggedRobotCommand command;
-        LeggedRobotSensor sensor;
-        LeggedRobotState state;
-        LeggedRobotControlSignal control;
+        RobotCommand command;
+        RobotSensor sensor;
+        RobotState state;
+        RobotControlSignal control;
 
         std::mutex profilingMutex;
         std::mutex commandMutex;
@@ -112,13 +112,13 @@ namespace crl::unitree::commons {
         ProfilingInfo profilingInfo;
 
     public:
-        UnitreeLeggedRobotData();
+        RobotData();
 
         // Constructor that initializes joint information
-        UnitreeLeggedRobotData(const std::vector<std::string>& jointNames,
+        RobotData(const std::vector<std::string>& jointNames,
                               const std::vector<double>& defaultJointConf);
 
-        ~UnitreeLeggedRobotData();
+        ~RobotData();
 
         void PropagateJointInformation(std::vector<std::string> jointNames, std::vector<double> defaultJointConf);
 
@@ -134,37 +134,37 @@ namespace crl::unitree::commons {
 
         /* ---------------------------------------- User Command ---------------------------------------- */
 
-        LeggedRobotCommand getCommand();
+        RobotCommand getCommand();
 
-        void setCommand(const LeggedRobotCommand &command);
+        void setCommand(const RobotCommand &command);
 
         /* ---------------------------------------- Sensor ---------------------------------------- */
 
-        LeggedRobotSensor getSensor();
+        RobotSensor getSensor();
 
-        void setSensor(const LeggedRobotSensor &sensor);
+        void setSensor(const RobotSensor &sensor);
 
         /* ---------------------------------------- State ---------------------------------------- */
 
-        LeggedRobotState getLeggedRobotState();
+        RobotState getRobotState();
 
         /**
          * Legged robot state estimator should call this.
          */
-        void setLeggedRobotState(const LeggedRobotState &state);
+        void setRobotState(const RobotState &state);
 
 
         /* ---------------------------------------- Control ---------------------------------------- */
 
-        LeggedRobotControlSignal getControlSignal();
+        RobotControlSignal getControlSignal();
 
         /**
          * Controller should call this.
          */
-        void setControlSignal(const LeggedRobotControlSignal &control);
+        void setControlSignal(const RobotControlSignal &control);
 
     };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
-#endif  //CRL_HUMANOID_UNITREELEGGEDROBOTDATA_H
+#endif  //CRL_HUMANOID_ROBOTDATA_H

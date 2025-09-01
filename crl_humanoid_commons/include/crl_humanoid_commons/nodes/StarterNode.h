@@ -7,7 +7,7 @@
 
 #include "crl_humanoid_commons/nodes/BaseNode.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
         /**
          * A node to control the robot from current pose to the target pose.
@@ -17,8 +17,10 @@ namespace crl::unitree::commons {
             enum class TargetMode { ZERO = 0, STAND = 1 };
 
             public:
-            StarterNode(const StarterNode::TargetMode target, const UnitreeRobotModel& model,
-            const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data, const std::string& nodeName);
+            StarterNode(const StarterNode::TargetMode target,
+                const std::shared_ptr<RobotModel>& model,
+                const std::shared_ptr<RobotData>& data,
+                const std::string& nodeName);
 
             ~StarterNode() = default;
 
@@ -40,6 +42,6 @@ namespace crl::unitree::commons {
             bool initialized_ = false;
         };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif

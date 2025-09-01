@@ -15,19 +15,19 @@
 #include "crl_humanoid_msgs/srv/ping.hpp"
 #include "crl_humanoid_msgs/srv/restart.hpp"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
     template <typename States, typename Machines, std::size_t N>
     class RobotNode : public BaseNode {
     public:
-        RobotNode(const crl::unitree::commons::UnitreeRobotModel& model, const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data,
+        RobotNode(const std::shared_ptr<RobotModel>& model, const std::shared_ptr<RobotData>& data,
                   const std::array<Machines, N>& monitoring, const std::atomic<bool>& is_transitioning)
             : BaseNode(model, data, "robot"),
               fsm_broadcaster("robot", monitoring),
               fsm_state_informer("robot", monitoring),
               is_transitioning(is_transitioning) {
             // joint parameters
-            jointCount_ = this->model_.jointNames.size();
+            jointCount_ = this->model_->jointNames.size();
             jointPosMax_.resize(jointCount_);
             jointPosMin_.resize(jointCount_);
             jointVelMax_.resize(jointCount_);
@@ -39,12 +39,12 @@ namespace crl::unitree::commons {
             auto jointParamDesc = rcl_interfaces::msg::ParameterDescriptor{};
             jointParamDesc.read_only = false;
             jointParamDesc.description = "Robot joint parameters";
-            this->template declare_parameter<std::vector<double>>("joint_position_max", model.jointPosMax, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_position_min", model.jointPosMin, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_velocity_max", model.jointVelMax, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_torque_max", model.jointTorqueMax, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_stiffness_default", model.jointStiffnessDefault, jointParamDesc);
-            this->template declare_parameter<std::vector<double>>("joint_damping_default", model.jointDampingDefault, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_position_max", model->jointPosMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_position_min", model->jointPosMin, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_velocity_max", model->jointVelMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_torque_max", model->jointTorqueMax, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_stiffness_default", model->jointStiffnessDefault, jointParamDesc);
+            this->template declare_parameter<std::vector<double>>("joint_damping_default", model->jointDampingDefault, jointParamDesc);
 
             // joint gains
             for (int i = 0; i < jointCount_; i++) {
@@ -87,7 +87,7 @@ namespace crl::unitree::commons {
          */
         virtual void updateCommandWithData() = 0;
 
-        virtual void resetRobot(const crl::unitree::commons::UnitreeRobotModel& model) {
+        virtual void resetRobot(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model) {
             // do nothing
             RCLCPP_WARN(this->get_logger(), "Reset robot is not implemented.");
         }
@@ -101,8 +101,8 @@ namespace crl::unitree::commons {
 
         void modelServiceCallback(const std::shared_ptr<crl_humanoid_msgs::srv::Model::Request> request,
                                   std::shared_ptr<crl_humanoid_msgs::srv::Model::Response> response) {
-            if (model_.modelType == RobotModelType::UNITREE_G1) {
-                response->model = (int8_t)crl::unitree::commons::RobotModelType::UNITREE_G1;
+            if (model_->modelType == RobotModelType::UNITREE_G1) {
+                response->model = (int8_t)crl::humanoid::commons::RobotModelType::UNITREE_G1;
             } else {
                 RCLCPP_FATAL(this->get_logger(), "Unknown robot model: model is not initialized properly.");
             }
@@ -124,7 +124,7 @@ namespace crl::unitree::commons {
             updateDataWithSensorReadings();
 
             // synchronize robot model with state estimation
-            auto state = this->data_->getLeggedRobotState();
+            auto state = this->data_->getRobotState();
 
             // send command through robot API
             updateCommandWithData();
@@ -158,6 +158,6 @@ namespace crl::unitree::commons {
         rclcpp::Service<crl_humanoid_msgs::srv::Restart>::SharedPtr restartService_ = nullptr;
     };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif  //CRL_HUMANOID_ROBOT_NODE

@@ -9,15 +9,15 @@
 #include "crl_humanoid_msgs/msg/monitor.hpp"
 #include "crl_humanoid_msgs/msg/remote.hpp"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
     /**
      * High-level communication node.
      */
     class CommNode : public BaseNode {
     public:
-        CommNode(const UnitreeRobotModel &model,
-                 const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData> &data);
+        CommNode(const std::shared_ptr<RobotModel> &model,
+                 const std::shared_ptr<RobotData> &data);
 
         ~CommNode() override = default;
 
@@ -38,6 +38,6 @@ namespace crl::unitree::commons {
         rclcpp::Subscription<crl_humanoid_msgs::msg::Remote>::SharedPtr remoteSubscription_;
     };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif

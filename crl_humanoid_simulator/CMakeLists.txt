@@ -82,5 +82,7 @@ if(BUILD_TESTING)
 endif()
 
 # No library targets to export since SimNode is header-only
+ament_export_include_directories(${MUJOCO_INCLUDE_DIRS})
+ament_export_libraries(${MUJOCO_LIBRARIES})
 ament_export_dependencies(rclcpp crl_humanoid_commons crl_humanoid_msgs crl_fsm)
 ament_package()

@@ -4,18 +4,18 @@
 
 #include "crl_humanoid_commons/RobotData.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
-    UnitreeLeggedRobotData::UnitreeLeggedRobotData() {}
+    RobotData::RobotData() {}
 
-    UnitreeLeggedRobotData::UnitreeLeggedRobotData(const std::vector<std::string>& jointNames,
+    RobotData::RobotData(const std::vector<std::string>& jointNames,
                                                    const std::vector<double>& defaultJointConf) {
         PropagateJointInformation(jointNames, defaultJointConf);
     }
 
-    UnitreeLeggedRobotData::~UnitreeLeggedRobotData() {}
+    RobotData::~RobotData() {}
 
-    void UnitreeLeggedRobotData::PropagateJointInformation(
+    void RobotData::PropagateJointInformation(
             std::vector<std::string> jointNames,
             std::vector<double> defaultJointConf) {
         // Clear existing data first to prevent duplication
@@ -31,68 +31,68 @@ namespace crl::unitree::commons {
 
     }
 
-    ProfilingInfo UnitreeLeggedRobotData::getProfilingInfo() {
+    ProfilingInfo RobotData::getProfilingInfo() {
         std::lock_guard<std::mutex> guard(profilingMutex);
         ProfilingInfo copy = profilingInfo;
         return copy;
     }
 
-    void UnitreeLeggedRobotData::setProfilingInfo(const ProfilingInfo& profilingInfo) {
+    void RobotData::setProfilingInfo(const ProfilingInfo& profilingInfo) {
         std::lock_guard<std::mutex> guard(profilingMutex);
         this->profilingInfo = profilingInfo;
     }
 
-    LeggedRobotCommand UnitreeLeggedRobotData::getCommand() {
+    RobotCommand RobotData::getCommand() {
         std::lock_guard<std::mutex> guard(commandMutex);
-        LeggedRobotCommand copy = command;
+        RobotCommand copy = command;
         return copy;
     }
 
-    void UnitreeLeggedRobotData::setCommand(const LeggedRobotCommand& command) {
+    void RobotData::setCommand(const RobotCommand& command) {
         std::lock_guard<std::mutex> guard(commandMutex);
         this->command = command;
     }
 
-    LeggedRobotSensor UnitreeLeggedRobotData::getSensor() {
+    RobotSensor RobotData::getSensor() {
         std::lock_guard<std::mutex> guard(sensorMutex);
-        LeggedRobotSensor copy = sensor;
+        RobotSensor copy = sensor;
         return copy;
     }
 
-    void UnitreeLeggedRobotData::setSensor(const LeggedRobotSensor& sensor) {
+    void RobotData::setSensor(const RobotSensor& sensor) {
         std::lock_guard<std::mutex> guard(sensorMutex);
         this->sensor = sensor;
     }
 
-    LeggedRobotState UnitreeLeggedRobotData::getLeggedRobotState() {
+    RobotState RobotData::getRobotState() {
         std::lock_guard<std::mutex> guard(stateMutex);
-        LeggedRobotState copy = state;
+        RobotState copy = state;
         return copy;
     }
 
-    void UnitreeLeggedRobotData::setLeggedRobotState(const LeggedRobotState& state) {
+    void RobotData::setRobotState(const RobotState& state) {
         std::lock_guard<std::mutex> guard(stateMutex);
         this->state = state;
     }
 
 
-    LeggedRobotControlSignal UnitreeLeggedRobotData::getControlSignal() {
+    RobotControlSignal RobotData::getControlSignal() {
         std::lock_guard<std::mutex> guard(controlMutex);
-        LeggedRobotControlSignal copy = control;
+        RobotControlSignal copy = control;
         return copy;
     }
 
-    void UnitreeLeggedRobotData::setControlSignal(const LeggedRobotControlSignal& control) {
+    void RobotData::setControlSignal(const RobotControlSignal& control) {
         std::lock_guard<std::mutex> guard(controlMutex);
         this->control = control;
     }
 
-    double UnitreeLeggedRobotData::getTimeStamp() const {
+    double RobotData::getTimeStamp() const {
         return timeStamp;
     }
 
-    void UnitreeLeggedRobotData::advanceInTime(double dt) {
+    void RobotData::advanceInTime(double dt) {
         timeStamp = timeStamp + dt;
     }
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons

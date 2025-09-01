@@ -12,7 +12,7 @@
 #include "crl_humanoid_commons/helpers/ConfigurationHelper.h"
 #include "rclcpp/rclcpp.hpp"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
     /**
      * Base class of ros nodes.
@@ -23,10 +23,10 @@ namespace crl::unitree::commons {
          * model is a struct contains basic info of robot model.
          * callbackRate is in Hz.
          */
-        BaseNode(const UnitreeRobotModel& model, const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data, const std::string& nodeName)
+        BaseNode(const std::shared_ptr<RobotModel>& model, const std::shared_ptr<RobotData>& data, const std::string& nodeName)
             : crl::ros::Node(nodeName), model_(model), data_(data) {
 
-            // Note: Joint information is now initialized in the UnitreeLeggedRobotData constructor
+            // Note: Joint information is now initialized in the RobotData constructor
             // No need to call PropagateJointInformation here anymore
 
             // parameters
@@ -86,13 +86,13 @@ namespace crl::unitree::commons {
         }
 
     protected:
-        const UnitreeRobotModel model_;
-        const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData> data_ = nullptr;
+        const std::shared_ptr<RobotModel> model_ = nullptr;
+        const std::shared_ptr<RobotData> data_ = nullptr;
         double timeStepSize_ = 0.01;  // it's not good idea to change this value during the operation!
         rclcpp::TimerBase::SharedPtr callbackTimer_;
         OnSetParametersCallbackHandle::SharedPtr parameterCallbackHandle_ = nullptr;
     };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif  //CRL_HUMANOID_BASENODE_H

@@ -7,14 +7,14 @@
 
 #include "crl_humanoid_commons/nodes/BaseNode.h"
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
         /**
-         * E-Stop logic for unitree robots.
+         * E-Stop logic for robots.
          */
         class EstopNode final : public BaseNode {
             public:
-            EstopNode(const UnitreeRobotModel& model, const std::shared_ptr<crl::unitree::commons::UnitreeLeggedRobotData>& data);
+            EstopNode(const std::shared_ptr<RobotModel>& model, const std::shared_ptr<RobotData>& data);
 
             ~EstopNode() override;
 
@@ -27,6 +27,6 @@ namespace crl::unitree::commons {
             crl::dVector jointDamping_;
         };
 
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif

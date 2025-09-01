@@ -8,28 +8,34 @@
 #include "crl_humanoid_commons/RobotData.h"
 #include "crl_humanoid_commons/RobotParameters.h"
 #include "crl_humanoid_commons/nodes/BaseNode.h"
+#include <rclcpp/logger.hpp>
 
-namespace crl::unitree::commons {
+namespace crl::humanoid::commons {
 
         /**
          * Abstract class for legged locomotion controllers.
          */
         class LocomotionController {
-            public:
+        public:
             // for debugging
             bool verbose = false;
 
-            protected:
+        protected:
             // Robot pointer
-            std::shared_ptr<UnitreeRobotModel> model = nullptr;
-            std::shared_ptr<UnitreeLeggedRobotData> data = nullptr;
+            std::shared_ptr<RobotModel> model_ = nullptr;
+            std::shared_ptr<RobotData> data_ = nullptr;
+
+            // ROS2 logger
+            rclcpp::Logger logger_;
 
             // Plan
             double timer = 0;
 
-            public:
-            explicit LocomotionController(const std::shared_ptr<UnitreeRobotModel>& model, const std::shared_ptr<UnitreeLeggedRobotData>& data)
-            : model(model), data(data) {}
+        public:
+            explicit LocomotionController(const std::shared_ptr<RobotModel>& model,
+                                          const std::shared_ptr<RobotData>& data,
+                                          const rclcpp::Logger& logger)
+                : model_(model), data_(data), logger_(logger) {}
 
             virtual ~LocomotionController() = default;
 
@@ -44,10 +50,11 @@ namespace crl::unitree::commons {
          * Useful as a default implementation or for testing purposes.
          */
         class DoNothingController : public LocomotionController {
-            public:
-            DoNothingController(const UnitreeRobotModel& robot,
-                               const std::shared_ptr<UnitreeLeggedRobotData>& data)
-                : LocomotionController(std::make_shared<UnitreeRobotModel>(robot), data) {}
+        public:
+            DoNothingController(const std::shared_ptr<RobotModel>& robot,
+                                const std::shared_ptr<RobotData>& data,
+                                const rclcpp::Logger& logger)
+                : LocomotionController(robot, data, logger) {}
 
             /**
              * Implementation of pure virtual method that does nothing.
@@ -59,29 +66,33 @@ namespace crl::unitree::commons {
         };
 
         /**
-         * Tracking controller wrapper for unitree robots.
+         * Abstract controller wrapper for robots.
          */
         template <typename ControlAlgorithm = DoNothingController>
         class ControllerNode : public BaseNode {
-            static_assert(std::is_convertible<ControlAlgorithm*, crl::unitree::commons::LocomotionController*>::value,
-                          "ControlAlgorithm must inherit crl::unitree::commons::LocomotionController as public");
+            static_assert(std::is_convertible<ControlAlgorithm*, LocomotionController*>::value,
+                          "ControlAlgorithm must inherit LocomotionController as public");
 
-            public:
-            ControllerNode(const UnitreeRobotModel& model, const std::shared_ptr<UnitreeLeggedRobotData>& data, const std::string& nodeName="controller")
-            : BaseNode(model, data, nodeName), controller_(model, data) {}
+        public:
+            ControllerNode(const std::shared_ptr<RobotModel>& model,
+                           const std::shared_ptr<RobotData>& data,
+                           const std::string& nodeName="controller")
+                : BaseNode(model, data, nodeName) {
+                controller_ = std::make_shared<ControlAlgorithm>(model_, data_, this->get_logger());
+            }
 
             ~ControllerNode() override = default;
 
-            protected:
+        protected:
             /**
              * One iteration-control logic implementation. This function is called by timer Callback.
              * Derived classes should implement this function.
              */
             virtual void controlCallbackImpl() {
-                controller_.computeAndApplyControlSignals(timeStepSize_);
+                controller_->computeAndApplyControlSignals(timeStepSize_);
             };
 
-            private:
+        private:
             void timerCallbackImpl() override {
                 auto start = this->now();
 
@@ -94,9 +105,9 @@ namespace crl::unitree::commons {
                 data_->setProfilingInfo(profileInfo);
             }
 
-            protected:
-            ControlAlgorithm controller_;
+        protected:
+            std::shared_ptr<ControlAlgorithm> controller_ = nullptr;
         };
-}  // namespace crl::unitree::commons
+}  // namespace crl::humanoid::commons
 
 #endif // CRL_HUMANOID_CONTROLLERNODE_H

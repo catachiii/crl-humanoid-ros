@@ -1,6 +1,0 @@
-{
-  "input_dim": 73,
-  "action_dim": 28,
-  "model": "g1_walk_policy.onnx",
-  "normalizer": "g1_walk_normalizer.txt"
-}

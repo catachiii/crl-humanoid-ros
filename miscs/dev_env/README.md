@@ -1,6 +1,6 @@
-# CRL Unitree ROS Humanoid
+# CRL Humanoid ROS
 
-Code for Unitree G1 humanoid robot simulation and control.
+Code for humanoid robot simulation and control.
 
 ## Dependencies
 
@@ -97,10 +97,10 @@ sudo ldconfig
 - `crl_ros_helper`: helper functions for ROS integration
 - `crl_fsm`: finite state machine implementation
 - `crl_fsm_msgs`: message definitions for crl_fsm
-- `crl_unitree_msgs`: message definitions for crl_unitree packages
-- `crl_unitree_commons`: common interfaces and utilities
-- `crl_unitree_monitor`: GUI application for robot operations
-- `crl_unitree_simulator`: simulation tool for software-in-the-loop testing with MuJoCo
+- `crl_humanoid_msgs`: message definitions for crl_humanoid packages
+- `crl_humanoid_commons`: common interfaces and utilities
+- `crl_humanoid_monitor`: GUI application for robot operations
+- `crl_humanoid_simulator`: simulation tool for software-in-the-loop testing with MuJoCo
 - `unitree_ros2`
   - `unitree_api`: Unitree API interfaces
   - `unitree_go`: Unitree Go series robot support
@@ -130,7 +130,7 @@ Note: If you use conda or virtualenv, first deactivate the python environment. I
     ./build.sh
 
     # Or build specific packages
-    colcon build --packages-up-to crl_unitree_simulator --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --packages-up-to crl_humanoid_simulator --cmake-args -DCMAKE_BUILD_TYPE=Release
     ```
 
 3. Source the environment:
@@ -143,18 +143,18 @@ Note: If you use conda or virtualenv, first deactivate the python environment. I
 
 1. Start the G1 humanoid simulation:
     ```bash
-    ros2 run crl_unitree_simulator sim
+    ros2 run crl_humanoid_simulator sim
     ```
 
 2. In another terminal, run the monitor application:
     ```bash
     # Maps 'monitor_joystick' topic to 'remote' topic for joystick control
-    ros2 run crl_unitree_monitor monitor --ros-args -r monitor_joystick:=remote
+    ros2 run crl_humanoid_monitor monitor --ros-args -r monitor_joystick:=remote
     ```
 
 3. Alternatively, use the launch file to run both simulator and monitor:
     ```bash
-    ros2 launch crl_unitree_simulator g1.py
+    ros2 launch crl_humanoid_simulator g1.py
     ```
     - The launch file runs monitor and simulator with the namespace `g1_sim`
     - It loads pre-defined parameters from the config directory
@@ -174,8 +174,8 @@ You can use the following VS Code tasks or run them directly:
 
 ### Building Components
 
-- **Simulator only**: `colcon build --packages-up-to crl_unitree_simulator`
-- **Monitor only**: `colcon build --packages-up-to crl_unitree_monitor`
+- **Simulator only**: `colcon build --packages-up-to crl_humanoid_simulator`
+- **Monitor only**: `colcon build --packages-up-to crl_humanoid_monitor`
 - **All packages**: `./build.sh`
 
 ## Contributing

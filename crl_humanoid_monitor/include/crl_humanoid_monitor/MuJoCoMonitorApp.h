@@ -17,7 +17,7 @@
 
 #include "crl_humanoid_monitor/MuJoCoMonitorNode.h"
 
-namespace crl::unitree::monitor {
+namespace crl::humanoid::monitor {
 
     template <typename States, typename Machines, typename TransitionsCont, std::size_t N, typename MonitorNodeType>
     class MuJoCoMonitorApp {
@@ -31,7 +31,7 @@ namespace crl::unitree::monitor {
             }
 
             // Create window
-            window_ = glfwCreateWindow(1400, 1000, "MuJoCo Unitree Monitor", nullptr, nullptr);
+            window_ = glfwCreateWindow(1400, 1000, "MuJoCo Monitor", nullptr, nullptr);
             if (!window_) {
                 glfwTerminate();
                 throw std::runtime_error("Failed to create GLFW window");
@@ -770,8 +770,8 @@ namespace crl::unitree::monitor {
     template <typename States, typename Machines, typename TransitionsContGen, std::size_t N>
     auto make_mujoco_monitor_app(const std::string& to_monitor, const TransitionsContGen& trans_cont, const std::array<Machines, N>& monitoring) {
         using TransitionsContType = std::invoke_result_t<TransitionsContGen>;
-        using UnitreeMuJoCoMonitorNodeType = crl::unitree::monitor::UnitreeMuJoCoMonitorNode<States, Machines, TransitionsContType, N>;
-        return MuJoCoMonitorApp<States, Machines, TransitionsContType, N, UnitreeMuJoCoMonitorNodeType>(to_monitor, trans_cont(), monitoring);
+        using MuJoCoMonitorNodeType = crl::humanoid::monitor::MuJoCoMonitorNode<States, Machines, TransitionsContType, N>;
+        return MuJoCoMonitorApp<States, Machines, TransitionsContType, N, MuJoCoMonitorNodeType>(to_monitor, trans_cont(), monitoring);
     }
 
-}  // namespace crl::unitree::monitor
+}  // namespace crl::humanoid::monitor
