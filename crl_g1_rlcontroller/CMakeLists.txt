@@ -26,6 +26,7 @@ find_package(crl_humanoid_commons 0.8.0 EXACT REQUIRED)
 find_package(onnxruntime 1.15.0 EXACT REQUIRED)
 find_package(crl_humanoid_simulator 0.8.0 EXACT REQUIRED)
 find_package(crl_humanoid_monitor 0.2.0 EXACT REQUIRED)
+find_package(crl_humanoid_hardware REQUIRED)
 find_package(crl_fsm REQUIRED)
 find_package(crl_ros_helper REQUIRED)
 
@@ -99,6 +100,12 @@ add_executable(simulator_main src/simulator_main.cpp)
 ament_target_dependencies(simulator_main crl_humanoid_simulator crl_humanoid_commons onnxruntime)
 target_link_libraries(simulator_main ${CRL_TARGET_NAME})
 
+# hardware executable
+add_executable(hardware_main src/hardware_main.cpp)
+
+ament_target_dependencies(hardware_main crl_humanoid_hardware crl_humanoid_commons onnxruntime)
+target_link_libraries(hardware_main ${CRL_TARGET_NAME})
+
 # monitor executable
 add_executable(monitor_main src/monitor_main.cpp)
 
@@ -143,7 +150,7 @@ install(
 )
 
 install(
-        TARGETS simulator_main monitor_main
+        TARGETS simulator_main hardware_main monitor_main
         DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -160,7 +167,7 @@ endif()
 
 ament_export_targets(${CRL_TARGET_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
-        crl_humanoid_commons onnxruntime crl_humanoid_simulator crl_humanoid_monitor crl_fsm crl_ros_helper OpenGL glfw3
+        crl_humanoid_commons onnxruntime crl_humanoid_simulator crl_humanoid_hardware crl_humanoid_monitor crl_fsm crl_ros_helper OpenGL glfw3
 )
 
 ament_package()

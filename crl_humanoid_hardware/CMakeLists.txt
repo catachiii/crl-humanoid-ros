@@ -25,6 +25,38 @@ find_package(Eigen3 REQUIRED)
 # Build unitree_sdk2 as a subdirectory
 add_subdirectory(ext/unitree_sdk2)
 
+# Also find the package for proper exports
+find_package(unitree_sdk2 QUIET)
+if(NOT unitree_sdk2_FOUND)
+    message(STATUS "unitree_sdk2 package not found, using local build")
+endif()
+
+# Create a library target for this package
+add_library(${PROJECT_NAME} INTERFACE)
+
+# Make include directories available to dependent packages
+target_include_directories(${PROJECT_NAME} INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ext/unitree_sdk2/thirdparty/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ext/unitree_sdk2/thirdparty/include/ddscxx>
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/ddscxx>
+)
+
+# Link unitree_sdk2 to this package's interface
+target_link_libraries(${PROJECT_NAME} INTERFACE unitree_sdk2 ddsc ddscxx)
+
+# Add ROS dependencies to the interface library
+ament_target_dependencies(${PROJECT_NAME} INTERFACE
+    rclcpp
+    std_msgs
+    geometry_msgs
+    crl_humanoid_commons
+    crl_fsm
+    crl_fsm_msgs
+    Eigen3
+)
+
 # -----------------------------------------------------------------------------
 # resource files
 # -----------------------------------------------------------------------------
@@ -45,6 +77,12 @@ install(
         DESTINATION include
 )
 
+# Install DDS headers from unitree_sdk2 thirdparty
+install(
+        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ext/unitree_sdk2/thirdparty/include/
+        DESTINATION include
+)
+
 # executable
 add_executable(hardware src/main.cpp)
 
@@ -56,7 +94,7 @@ target_include_directories(hardware PRIVATE
 
 # Link libraries
 target_link_libraries(hardware
-    unitree_sdk2
+    ${PROJECT_NAME}
 )
 
 # Dependencies
@@ -80,6 +118,19 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+# Install the interface library and export targets
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}Targets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+# Export the targets for other packages to use
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+ament_export_include_directories(include include/ddscxx)
+
 # Export dependencies for other packages that might depend on this one
-ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs)
+ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs Eigen3 unitree_sdk2)
 ament_package()
