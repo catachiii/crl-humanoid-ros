@@ -8,6 +8,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <chrono>
+#include <unordered_map>
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
@@ -93,25 +94,44 @@ namespace crl::unitree::hardware::g1 {
         uint16_t keys = 0;
     };
 
-    // Structure to hold state-key mappings
-    struct StateKeyBinding {
-        std::string stateName;
-        std::string keyName;
-        uint16_t keyConstant;
-    };
-
     template <typename States, typename Machines, std::size_t N>
     class G1Node : public crl::humanoid::commons::RobotNode<States, Machines, N> {
         using BaseRobotNode = crl::humanoid::commons::RobotNode<States, Machines, N>;
+        using StateNameToEnumMap = std::unordered_map<std::string, States>;
 
     public:
+        // Structure to hold state-key mappings
+        struct StateKeyBinding {
+            std::string stateName;
+            std::string keyName;
+            uint16_t keyConstant;
+            States stateEnum;
+        };
+
+        // Helper function to create state name mappings
+        static StateNameToEnumMap createStateMapping(
+            const std::vector<std::pair<std::string, States>>& mappings) {
+            StateNameToEnumMap result;
+            for (const auto& mapping : mappings) {
+                result[mapping.first] = mapping.second;
+            }
+            return result;
+        }
+        
         G1Node(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model,
                const std::shared_ptr<crl::humanoid::commons::RobotData>& data,
                const std::array<Machines, N>& monitoring,
-               const std::atomic<bool>& is_transitioning)
+               const std::atomic<bool>& is_transitioning,
+               const StateNameToEnumMap& stateNameMap = {})
             : BaseRobotNode(model, data, monitoring, is_transitioning),
               isSDKInitialized_(false),
-              mode_machine_(0) {
+              mode_machine_(0),
+              stateNameToEnumMap_(stateNameMap) {
+
+            // Initialize default state mappings if none provided
+            if (stateNameToEnumMap_.empty()) {
+                initializeDefaultStateMappings();
+            }
 
             // Declare and get network interface parameter
             this->declare_parameter("network_interface", "eth0");
@@ -180,6 +200,31 @@ namespace crl::unitree::hardware::g1 {
             }
         }
 
+        // Convert string to state enum using configurable mapping
+        States stringToStateEnum(const std::string& stateName) {
+            auto it = stateNameToEnumMap_.find(stateName);
+            if (it != stateNameToEnumMap_.end()) {
+                return it->second;
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "Unknown state name: %s. Available states are not properly configured!", stateName.c_str());
+                // Log available states for debugging
+                std::string availableStates;
+                for (const auto& pair : stateNameToEnumMap_) {
+                    if (!availableStates.empty()) availableStates += ", ";
+                    availableStates += pair.first;
+                }
+                RCLCPP_ERROR(this->get_logger(), "Available states: %s", availableStates.c_str());
+                throw std::runtime_error("Invalid state name: " + stateName);
+            }
+        }
+
+        // Initialize default state mappings
+        void initializeDefaultStateMappings() {
+            // This will be populated with the basic states that are always available
+            // Users can override this by providing a custom map in the constructor
+            RCLCPP_INFO(this->get_logger(), "No explicit state mappings provided. State transitions will need to be configured via the state mapping.");
+        }
+
         void setupStateKeybindings() {
             try {
                 auto stateNames = this->get_parameter("state_keybindings.states").as_string_array();
@@ -202,6 +247,7 @@ namespace crl::unitree::hardware::g1 {
                     binding.stateName = stateNames[i];
                     binding.keyName = keyNames[i];
                     binding.keyConstant = stringToButtonConstant(keyNames[i]);
+                    binding.stateEnum = stringToStateEnum(stateNames[i]);
 
                     stateKeybindings_.push_back(binding);
 
@@ -217,11 +263,23 @@ namespace crl::unitree::hardware::g1 {
 
         void setupDefaultKeybindings() {
             stateKeybindings_.clear();
-            stateKeybindings_ = {
-                {"ESTOP", "B", stringToButtonConstant("B")},
-                {"STAND", "A", stringToButtonConstant("A")},
-                {"WALK", "X", stringToButtonConstant("X")}
-            };
+
+            // Only set up default keybindings if we have state mappings available
+            if (!stateNameToEnumMap_.empty()) {
+                auto estopIt = stateNameToEnumMap_.find("ESTOP");
+                auto standIt = stateNameToEnumMap_.find("STAND");
+                auto walkIt = stateNameToEnumMap_.find("WALK");
+
+                if (estopIt != stateNameToEnumMap_.end()) {
+                    stateKeybindings_.push_back({"ESTOP", "B", stringToButtonConstant("B"), estopIt->second});
+                }
+                if (standIt != stateNameToEnumMap_.end()) {
+                    stateKeybindings_.push_back({"STAND", "A", stringToButtonConstant("A"), standIt->second});
+                }
+                if (walkIt != stateNameToEnumMap_.end()) {
+                    stateKeybindings_.push_back({"WALK", "X", stringToButtonConstant("X"), walkIt->second});
+                }
+            }
 
             RCLCPP_INFO(this->get_logger(), "Using default keybindings: ESTOP=B, STAND=A, WALK=X");
         }
@@ -447,38 +505,38 @@ namespace crl::unitree::hardware::g1 {
             this->data_->setSensor(sensorInput);
             this->data_->setRobotState(robotState);
 
-            // // safety check with sensor values
-            // bool jointLimit = false;
-            // {
-            //     // angle limits - check using the joint parameter arrays from RobotNode base class
-            //     for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size() && dataIdx < this->jointCount_; ++dataIdx) {
-            //         if (dataIdx < dataToHardwareMapping_.size()) {
-            //             size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
+            // safety check with sensor values
+            bool jointLimit = false;
+            {
+                // angle limits - check using the joint parameter arrays from RobotNode base class
+                for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size() && dataIdx < this->jointCount_; ++dataIdx) {
+                    if (dataIdx < dataToHardwareMapping_.size()) {
+                        size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
 
-            //             if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
-            //                 double angle = currentState.motor_state()[hardwareIdx].q();
-            //                 if (angle > this->jointPosMax_[dataIdx]) {
-            //                     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-            //                                        "Joint %s (idx %zu) angle %f exceeds max %f",
-            //                                        CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMax_[dataIdx]);
-            //                     jointLimit = true;
-            //                 }
-            //                 if (angle < this->jointPosMin_[dataIdx]) {
-            //                     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-            //                                        "Joint %s (idx %zu) angle %f below min %f",
-            //                                        CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMin_[dataIdx]);
-            //                     jointLimit = true;
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+                        if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
+                            double angle = currentState.motor_state()[hardwareIdx].q();
+                            if (angle > this->jointPosMax_[dataIdx]) {
+                                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                                   "Joint %s (idx %zu) angle %f exceeds max %f",
+                                                   CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMax_[dataIdx]);
+                                jointLimit = true;
+                            }
+                            if (angle < this->jointPosMin_[dataIdx]) {
+                                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                                   "Joint %s (idx %zu) angle %f below min %f",
+                                                   CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMin_[dataIdx]);
+                                jointLimit = true;
+                            }
+                        }
+                    }
+                }
+            }
 
-            // // trigger estop if safe check failed
-            // if (jointLimit && !this->data_->softEStop) {
-            //     RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
-            //     this->fsm_broadcaster.broadcast_switch(States::ESTOP);
-            // }
+            // trigger estop if safe check failed
+            if (jointLimit && !this->data_->softEStop) {
+                RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
+                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
+            }
 
             // populate joystick command to robot data
             {
@@ -503,16 +561,8 @@ namespace crl::unitree::hardware::g1 {
                         if (currentJoy.keys & binding.keyConstant) {
                             RCLCPP_INFO(this->get_logger(), "Trigger state transition to %s.", binding.stateName.c_str());
 
-                            // Convert state name to enum and broadcast
-                            if (binding.stateName == "ESTOP") {
-                                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
-                            } else if (binding.stateName == "STAND") {
-                                this->fsm_broadcaster.broadcast_switch(States::STAND);
-                            } else if (binding.stateName == "WALK") {
-                                this->fsm_broadcaster.broadcast_switch(States::WALK);
-                            } else {
-                                RCLCPP_WARN(this->get_logger(), "Unknown state name: %s", binding.stateName.c_str());
-                            }
+                            // Broadcast state transition using the stored state enum
+                            this->fsm_broadcaster.broadcast_switch(binding.stateEnum);
                             break; // Only handle the first matching key
                         }
                     }
@@ -522,13 +572,6 @@ namespace crl::unitree::hardware::g1 {
 
         void updateCommandWithData() override {
             auto control = this->data_->getControlSignal();
-
-            // // debug print control signal
-            // for (size_t i = 0; i < control.jointControl.size(); i++) {
-            //     RCLCPP_INFO(this->get_logger(), "Joint %zu: mode=%d, desiredPos=%.2f, stiffness=%.2f, damping=%.2f",
-            //                 i, control.jointControl[i].mode, control.jointControl[i].desiredPos,
-            //                 control.jointControl[i].stiffness, control.jointControl[i].damping);
-            // }
 
             // populate control signal using joint mappings
             bool eStop = this->data_->softEStop;
@@ -667,6 +710,7 @@ namespace crl::unitree::hardware::g1 {
         // Keybinding parameters
         uint16_t modifierButton_;
         std::vector<StateKeyBinding> stateKeybindings_;
+        StateNameToEnumMap stateNameToEnumMap_;
 
         // SDK publishers and subscribers
         ::unitree::robot::ChannelPublisherPtr<unitree_hg::msg::dds_::LowCmd_> lowCommandPublisher_;

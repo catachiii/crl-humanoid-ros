@@ -64,8 +64,16 @@ int main(int argc, char** argv) {
     std::shared_ptr<crl::unitree::hardware::g1::G1Node<States, Machines, 1>> robotNode;
 
     if (modelName == "G1") {
-        robotNode = std::make_shared<crl::unitree::hardware::g1::G1Node<States, Machines, 1>>(
-            model, data, monitoring, machine.is_transitioning());
+        // Create state name to enum mapping for G1Node
+        using G1NodeType = crl::unitree::hardware::g1::G1Node<States, Machines, 1>;
+        auto stateMapping = G1NodeType::createStateMapping({
+            {"ESTOP", States::ESTOP},
+            {"STAND", States::STAND},
+            {"WALK", States::WALK}
+        });
+
+        robotNode = std::make_shared<G1NodeType>(
+            model, data, monitoring, machine.is_transitioning(), stateMapping);
     } else {
         RCLCPP_ERROR(rclcpp::get_logger("hardware"), "Unsupported robot model: %s", modelName.c_str());
         return -1;

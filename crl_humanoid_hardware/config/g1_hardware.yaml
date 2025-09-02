@@ -36,8 +36,11 @@
       keybinding_modifier: "L1"    # Modifier button to hold
 
       # State keybindings - flexible configuration for multiple states
+      # NOTE: The states listed here must match the states defined in the main.cpp file
+      # Currently available states: ESTOP, STAND, WALK
+      # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
       state_keybindings:
-        states: ["ESTOP", "STAND", "WALK"]  # State names (add more as needed)
+        states: ["ESTOP", "STAND", "WALK"]  # State names (must match enum in main.cpp)
         keys:   ["B",     "A",     "X"]     # Corresponding keys for each state
 
       # Usage: Hold [modifier] + [state_key] to trigger state transition
@@ -46,9 +49,14 @@
       # - Hold L1 + A to trigger STAND
       # - Hold L1 + X to trigger WALK
       #
-      # To add more states, extend both arrays:
-      # states: ["ESTOP", "STAND", "WALK", "IDLE", "RUN"]
-      # keys:   ["B",     "A",     "X",    "Y",    "up"]
+      # To add more states:
+      # 1. First, update the crl_fsm_states macro in main.cpp to include new states
+      # 2. Add state machines and transitions in main.cpp
+      # 3. Update the state mapping in main.cpp
+      # 4. Then extend both arrays here:
+      # states: ["ESTOP", "STAND", "WALK", "GETUP", "SITDOWN"]
+      # keys:   ["B",     "A",     "X",    "Y",     "up"]
+      # keys:   ["B",     "A",     "X",    "Y",     "up"]
 
       # Optional: Add other hardware-specific parameters here
       # joint_stiffness_scale: 1.0
