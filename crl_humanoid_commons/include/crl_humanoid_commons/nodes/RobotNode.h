@@ -123,9 +123,6 @@ namespace crl::humanoid::commons {
             // get robot state through robot API
             updateDataWithSensorReadings();
 
-            // synchronize robot model with state estimation
-            auto state = this->data_->getRobotState();
-
             // send command through robot API
             updateCommandWithData();
 

@@ -110,7 +110,8 @@ namespace crl::unitree::hardware::g1 {
                const std::array<Machines, N>& monitoring,
                const std::atomic<bool>& is_transitioning)
             : BaseRobotNode(model, data, monitoring, is_transitioning),
-              isSDKInitialized_(false) {
+              isSDKInitialized_(false),
+              mode_machine_(0) {
 
             // Declare and get network interface parameter
             this->declare_parameter("network_interface", "eth0");
@@ -264,6 +265,17 @@ namespace crl::unitree::hardware::g1 {
                 return;
             }
 
+            // Update mode machine and log if it changes (similar to G1 example)
+            if (mode_machine_ != low_state.mode_machine()) {
+                if (mode_machine_ == 0) {
+                    RCLCPP_INFO(this->get_logger(), "G1 type: %u", static_cast<unsigned>(low_state.mode_machine()));
+                } else {
+                    RCLCPP_INFO(this->get_logger(), "Mode machine changed from %u to %u",
+                               static_cast<unsigned>(mode_machine_), static_cast<unsigned>(low_state.mode_machine()));
+                }
+                mode_machine_ = low_state.mode_machine();
+            }
+
             // Update state
             {
                 std::lock_guard<std::mutex> lock(stateMutex_);
@@ -367,6 +379,7 @@ namespace crl::unitree::hardware::g1 {
         void updateDataWithSensorReadings() override {
             // Create sensor data structure for humanoid robot
             crl::humanoid::commons::RobotSensor sensorInput;
+            crl::humanoid::commons::RobotState robotState;
 
             // Thread-safe access to state
             unitree_hg::msg::dds_::LowState_ currentState;
@@ -398,6 +411,7 @@ namespace crl::unitree::hardware::g1 {
 
             // Populate joint sensor data using mappings
             sensorInput.jointSensors.resize(CanonicalJointNames_.size());
+            robotState.jointStates.resize(CanonicalJointNames_.size());
             for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size(); ++dataIdx) {
                 if (dataIdx < dataToHardwareMapping_.size()) {
                     size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
@@ -407,12 +421,18 @@ namespace crl::unitree::hardware::g1 {
                         sensorInput.jointSensors[dataIdx].jointPos = currentState.motor_state()[hardwareIdx].q();
                         sensorInput.jointSensors[dataIdx].jointVel = currentState.motor_state()[hardwareIdx].dq();
                         sensorInput.jointSensors[dataIdx].jointTorque = currentState.motor_state()[hardwareIdx].tau_est();
+                        robotState.jointStates[dataIdx].jointName = CanonicalJointNames_[dataIdx];
+                        robotState.jointStates[dataIdx].jointPos = currentState.motor_state()[hardwareIdx].q();
+                        robotState.jointStates[dataIdx].jointVel = currentState.motor_state()[hardwareIdx].dq();
                     } else {
                         // Set defaults for unmapped joints
                         sensorInput.jointSensors[dataIdx].jointName = CanonicalJointNames_[dataIdx];
                         sensorInput.jointSensors[dataIdx].jointPos = 0.0;
                         sensorInput.jointSensors[dataIdx].jointVel = 0.0;
                         sensorInput.jointSensors[dataIdx].jointTorque = 0.0;
+                        robotState.jointStates[dataIdx].jointName = CanonicalJointNames_[dataIdx];
+                        robotState.jointStates[dataIdx].jointPos = 0.0;
+                        robotState.jointStates[dataIdx].jointVel = 0.0;
 
                         if (hardwareIdx == SIZE_MAX) {
                             RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
@@ -425,39 +445,40 @@ namespace crl::unitree::hardware::g1 {
 
             // update sensor data
             this->data_->setSensor(sensorInput);
+            this->data_->setRobotState(robotState);
 
-            // safety check with sensor values
-            bool jointLimit = false;
-            {
-                // angle limits - check using the joint parameter arrays from RobotNode base class
-                for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size() && dataIdx < this->jointCount_; ++dataIdx) {
-                    if (dataIdx < dataToHardwareMapping_.size()) {
-                        size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
+            // // safety check with sensor values
+            // bool jointLimit = false;
+            // {
+            //     // angle limits - check using the joint parameter arrays from RobotNode base class
+            //     for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size() && dataIdx < this->jointCount_; ++dataIdx) {
+            //         if (dataIdx < dataToHardwareMapping_.size()) {
+            //             size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
 
-                        if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
-                            double angle = currentState.motor_state()[hardwareIdx].q();
-                            if (angle > this->jointPosMax_[dataIdx]) {
-                                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                                   "Joint %s (idx %zu) angle %f exceeds max %f",
-                                                   CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMax_[dataIdx]);
-                                jointLimit = true;
-                            }
-                            if (angle < this->jointPosMin_[dataIdx]) {
-                                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                                   "Joint %s (idx %zu) angle %f below min %f",
-                                                   CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMin_[dataIdx]);
-                                jointLimit = true;
-                            }
-                        }
-                    }
-                }
-            }
+            //             if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
+            //                 double angle = currentState.motor_state()[hardwareIdx].q();
+            //                 if (angle > this->jointPosMax_[dataIdx]) {
+            //                     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+            //                                        "Joint %s (idx %zu) angle %f exceeds max %f",
+            //                                        CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMax_[dataIdx]);
+            //                     jointLimit = true;
+            //                 }
+            //                 if (angle < this->jointPosMin_[dataIdx]) {
+            //                     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+            //                                        "Joint %s (idx %zu) angle %f below min %f",
+            //                                        CanonicalJointNames_[dataIdx].c_str(), dataIdx, angle, this->jointPosMin_[dataIdx]);
+            //                     jointLimit = true;
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
 
-            // trigger estop if safe check failed
-            if (jointLimit && !this->data_->softEStop) {
-                RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
-                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
-            }
+            // // trigger estop if safe check failed
+            // if (jointLimit && !this->data_->softEStop) {
+            //     RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
+            //     this->fsm_broadcaster.broadcast_switch(States::ESTOP);
+            // }
 
             // populate joystick command to robot data
             {
@@ -502,18 +523,29 @@ namespace crl::unitree::hardware::g1 {
         void updateCommandWithData() override {
             auto control = this->data_->getControlSignal();
 
+            // // debug print control signal
+            // for (size_t i = 0; i < control.jointControl.size(); i++) {
+            //     RCLCPP_INFO(this->get_logger(), "Joint %zu: mode=%d, desiredPos=%.2f, stiffness=%.2f, damping=%.2f",
+            //                 i, control.jointControl[i].mode, control.jointControl[i].desiredPos,
+            //                 control.jointControl[i].stiffness, control.jointControl[i].damping);
+            // }
+
             // populate control signal using joint mappings
             bool eStop = this->data_->softEStop;
 
             // Clear all motor commands first (G1 has up to 35 motors in DDS structure)
             for (size_t i = 0; i < cmd_.motor_cmd().size(); i++) {
-                cmd_.motor_cmd()[i].mode() = 0x00;
+                cmd_.motor_cmd()[i].mode() = 0;
                 cmd_.motor_cmd()[i].kp() = 0;
                 cmd_.motor_cmd()[i].kd() = 0;
                 cmd_.motor_cmd()[i].q() = 0.0f;
                 cmd_.motor_cmd()[i].dq() = 0.0f;
                 cmd_.motor_cmd()[i].tau() = 0;
             }
+
+            cmd_.mode_pr() = 0; // PR mode 0, AB mode 1
+            cmd_.mode_machine() = mode_machine_;
+
 
             // Apply control commands using mappings
             for (size_t dataIdx = 0; dataIdx < control.jointControl.size() && dataIdx < CanonicalJointNames_.size(); ++dataIdx) {
@@ -522,52 +554,49 @@ namespace crl::unitree::hardware::g1 {
 
                     if (hardwareIdx != SIZE_MAX && hardwareIdx < cmd_.motor_cmd().size()) {
                         if (eStop) {
-                            cmd_.motor_cmd()[hardwareIdx].mode() = 0x00;
+                            cmd_.motor_cmd()[hardwareIdx].mode() = 0;
                             cmd_.motor_cmd()[hardwareIdx].kp() = 0;
                             cmd_.motor_cmd()[hardwareIdx].kd() = 0;
                             cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
                             cmd_.motor_cmd()[hardwareIdx].dq() = 0.0f;
                             cmd_.motor_cmd()[hardwareIdx].tau() = 0;
                         } else {
+                            double jointKp = (control.jointControl[dataIdx].stiffness > 0) ?
+                                            control.jointControl[dataIdx].stiffness :
+                                            this->jointStiffnessDefault_[dataIdx];
+                            double jointKd = (control.jointControl[dataIdx].damping > 0) ?
+                                            control.jointControl[dataIdx].damping :
+                                            this->jointDampingDefault_[dataIdx];
                             switch (static_cast<int>(control.jointControl[dataIdx].mode)) {
                                 case 1:  // Position mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0x01;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() =
-                                        (dataIdx < this->jointStiffnessDefault_.size()) ? this->jointStiffnessDefault_[dataIdx] : 100.0f;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() =
-                                        (dataIdx < this->jointDampingDefault_.size()) ? this->jointDampingDefault_[dataIdx] : 2.5f;
+                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
+                                    cmd_.motor_cmd()[hardwareIdx].kp() = jointKp;
+                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
                                     cmd_.motor_cmd()[hardwareIdx].q() = (float)control.jointControl[dataIdx].desiredPos;
                                     cmd_.motor_cmd()[hardwareIdx].dq() = 0;
                                     cmd_.motor_cmd()[hardwareIdx].tau() = 0;
                                     break;
 
                                 case 2:  // Velocity mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0x01;
+                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
                                     cmd_.motor_cmd()[hardwareIdx].kp() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() =
-                                        (dataIdx < this->jointDampingDefault_.size()) ? this->jointDampingDefault_[dataIdx] : 2.5f;
+                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
                                     cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
                                     cmd_.motor_cmd()[hardwareIdx].dq() = (float)control.jointControl[dataIdx].desiredSpeed;
                                     cmd_.motor_cmd()[hardwareIdx].tau() = 0;
                                     break;
 
                                 case 3:  // Force/Torque mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0x01;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() =
-                                        (control.jointControl[dataIdx].stiffness > 0)
-                                            ? (float)control.jointControl[dataIdx].stiffness
-                                            : ((dataIdx < this->jointStiffnessDefault_.size()) ? this->jointStiffnessDefault_[dataIdx] : 100.0f);
-                                    cmd_.motor_cmd()[hardwareIdx].kd() =
-                                        (control.jointControl[dataIdx].damping > 0)
-                                            ? (float)control.jointControl[dataIdx].damping
-                                            : ((dataIdx < this->jointDampingDefault_.size()) ? this->jointDampingDefault_[dataIdx] : 2.5f);
+                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
+                                    cmd_.motor_cmd()[hardwareIdx].kp() = jointKp;
+                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
                                     cmd_.motor_cmd()[hardwareIdx].q() = (float)control.jointControl[dataIdx].desiredPos;
                                     cmd_.motor_cmd()[hardwareIdx].dq() = (float)control.jointControl[dataIdx].desiredSpeed;
                                     cmd_.motor_cmd()[hardwareIdx].tau() = (float)control.jointControl[dataIdx].desiredTorque;
                                     break;
 
                                 default:  // Motor brake (same as soft e-stop)
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0x00;
+                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0;
                                     cmd_.motor_cmd()[hardwareIdx].kp() = 0;
                                     cmd_.motor_cmd()[hardwareIdx].kd() = 0;
                                     cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
@@ -597,7 +626,7 @@ namespace crl::unitree::hardware::g1 {
         void InitLowCmd() {
             // Initialize DDS command structure
             cmd_.mode_pr() = 0;
-            cmd_.mode_machine() = 0;
+            cmd_.mode_machine() = mode_machine_;  // Use stored mode_machine value
 
             // Initialize all motors (G1 DDS structure has 35 motor slots)
             for (size_t i = 0; i < cmd_.motor_cmd().size(); i++) {
@@ -627,6 +656,7 @@ namespace crl::unitree::hardware::g1 {
         // SDK configuration
         std::string networkInterface_;
         bool isSDKInitialized_;
+        uint8_t mode_machine_;
 
         // Joystick velocity parameters
         double joystickMaxForwardVel_;

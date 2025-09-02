@@ -76,15 +76,8 @@ int main(int argc, char** argv) {
     executor.add_node(commNode);
 
     // Start the FSM machine (this will handle the hardware communication loop)
-    try {
-        machine.spin();
-    } catch (const std::exception& e) {
-        RCLCPP_ERROR(rclcpp::get_logger("hardware"), "Hardware interface error: %s", e.what());
-        rclcpp::shutdown();
-        return -1;
-    }
+    machine.spin();
 
-    RCLCPP_INFO(rclcpp::get_logger("hardware"), "Hardware interface shutting down...");
     rclcpp::shutdown();
     return 0;
 }
