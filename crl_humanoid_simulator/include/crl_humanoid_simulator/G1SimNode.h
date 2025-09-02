@@ -3,8 +3,8 @@
 // Adapted to use MuJoCo instead of ODE
 //
 
-#ifndef CRL_HUMANOID_SIM_NODE
-#define CRL_HUMANOID_SIM_NODE
+#ifndef CRL_HUMANOID_SIMULATOR_G1_NODE
+#define CRL_HUMANOID_SIMULATOR_G1_NODE
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
@@ -737,4 +737,4 @@ namespace crl::humanoid::simulator {
 
 }  // namespace crl::humanoid::simulator
 
-#endif  //CRL_HUMANOID_SIM_NODE
+#endif  //CRL_HUMANOID_SIMULATOR_G1_NODE

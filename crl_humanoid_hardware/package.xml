@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>crl_humanoid_hardware</name>
+  <version>0.0.0</version>
+  <description>Hardware interface for CRL humanoid robots using Unitree SDK2</description>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>crl_humanoid_commons</depend>
+  <depend>crl_fsm</depend>
+  <depend>crl_fsm_msgs</depend>
+
+  <build_depend>cmake</build_depend>
+  <build_depend>libeigen3-dev</build_depend>
+  <build_depend>libcxxopts-dev</build_depend>
+
+  <exec_depend>libeigen3-dev</exec_depend>
+  <exec_depend>libcxxopts-dev</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
