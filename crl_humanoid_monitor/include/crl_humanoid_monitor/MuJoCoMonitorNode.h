@@ -416,14 +416,14 @@ namespace crl::humanoid::monitor {
             commandUI_.targetSidewaysSpeed += deltaSideways;
             commandUI_.targetTurningSpeed += deltaTurning;
 
-            // Clamp values to reasonable limits
-            const double maxForwardSpeed = 1.0; // m/s
-            const double maxSidewaysSpeed = 1.0; // m/s
-            const double maxTurningSpeed = 1.0; // rad/s
+            // // Clamp values to reasonable limits
+            // const double maxForwardSpeed = 1.0; // m/s
+            // const double maxSidewaysSpeed = 1.0; // m/s
+            // const double maxTurningSpeed = 1.0; // rad/s
 
-            commandUI_.targetForwardSpeed = std::clamp(commandUI_.targetForwardSpeed, -maxForwardSpeed, maxForwardSpeed);
-            commandUI_.targetSidewaysSpeed = std::clamp(commandUI_.targetSidewaysSpeed, -maxSidewaysSpeed, maxSidewaysSpeed);
-            commandUI_.targetTurningSpeed = std::clamp(commandUI_.targetTurningSpeed, -maxTurningSpeed, maxTurningSpeed);
+            // commandUI_.targetForwardSpeed = std::clamp(commandUI_.targetForwardSpeed, -maxForwardSpeed, maxForwardSpeed);
+            // commandUI_.targetSidewaysSpeed = std::clamp(commandUI_.targetSidewaysSpeed, -maxSidewaysSpeed, maxSidewaysSpeed);
+            // commandUI_.targetTurningSpeed = std::clamp(commandUI_.targetTurningSpeed, -maxTurningSpeed, maxTurningSpeed);
 
             // Publish the updated command
             publishRemoteCommands();

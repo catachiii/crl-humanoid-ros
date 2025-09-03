@@ -44,6 +44,17 @@ namespace crl::humanoid::simulator {
             simulationParamDesc.read_only = true;
             this->template declare_parameter<std::string>("robot_xml_file", "g1_description/scene_crl.xml", simulationParamDesc);
 
+            // Declare joystick velocity parameters
+            this->declare_parameter("joystick_max_forward_velocity", 1.0);
+            this->declare_parameter("joystick_max_backward_velocity", 1.0);
+            this->declare_parameter("joystick_max_sideways_velocity", 1.0);
+            this->declare_parameter("joystick_max_turning_velocity", 1.0);
+
+            joystickMaxForwardVel_ = this->get_parameter("joystick_max_forward_velocity").as_double();
+            joystickMaxBackwardVel_ = this->get_parameter("joystick_max_backward_velocity").as_double();
+            joystickMaxSidewaysVel_ = this->get_parameter("joystick_max_sideways_velocity").as_double();
+            joystickMaxTurningVel_ = this->get_parameter("joystick_max_turning_velocity").as_double();
+
             // Setup elastic band service
             elasticBandService_ = this->template create_service<crl_humanoid_msgs::srv::ElasticBand>(
                 "elastic_band",
@@ -262,6 +273,39 @@ namespace crl::humanoid::simulator {
 
             // Update sensor data
             this->data_->setSensor(sensorInput);
+
+            auto command = this->data_->getCommand();
+            if (command.targetForwardSpeed > joystickMaxForwardVel_) {
+                command.targetForwardSpeed = joystickMaxForwardVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Forward speed command limited to max %f m/s", joystickMaxForwardVel_);
+            } else if (command.targetForwardSpeed < -joystickMaxBackwardVel_) {
+                command.targetForwardSpeed = -joystickMaxBackwardVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Backward speed command limited to max %f m/s", joystickMaxBackwardVel_);
+            }
+
+            if (command.targetSidewaysSpeed > joystickMaxSidewaysVel_) {
+                command.targetSidewaysSpeed = joystickMaxSidewaysVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Sideways speed command limited to max %f m/s", joystickMaxSidewaysVel_);
+            } else if (command.targetSidewaysSpeed < -joystickMaxSidewaysVel_) {
+                command.targetSidewaysSpeed = -joystickMaxSidewaysVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Sideways speed command limited to max %f m/s", -joystickMaxSidewaysVel_);
+            }
+
+            if (command.targetTurningSpeed > joystickMaxTurningVel_) {
+                command.targetTurningSpeed = joystickMaxTurningVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Turning speed command limited to max %f rad/s", joystickMaxTurningVel_);
+            } else if (command.targetTurningSpeed < -joystickMaxTurningVel_) {
+                command.targetTurningSpeed = -joystickMaxTurningVel_;
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                   "Turning speed command limited to max %f rad/s", -joystickMaxTurningVel_);
+            }
+
+            this->data_->setCommand(command);
 
             // Always use ground truth from MuJoCo simulation until we want to implement state estimation
             overwriteStateEstimator();
@@ -724,6 +768,12 @@ namespace crl::humanoid::simulator {
         std::vector<std::string> jointNames_; // Canonical order (policy order)
         std::vector<size_t> mujocoToDataMapping_; // Maps MuJoCo XML index to canonical index
         std::vector<size_t> dataToMujocoMapping_; // Maps canonical index to MuJoCo XML index
+
+        // Joystick velocity parameters
+        double joystickMaxForwardVel_;
+        double joystickMaxBackwardVel_;
+        double joystickMaxSidewaysVel_;
+        double joystickMaxTurningVel_;
 
         // Elastic band support for hanging the robot
         bool elasticBandEnabled_ = true;
