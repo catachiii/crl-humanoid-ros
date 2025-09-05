@@ -34,6 +34,6 @@
       time_step_size: 0.001667  # sim rate
       robot_xml_file: "g1_description/scene_crl.xml"
       joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
-      joystick_max_backward_velocity: 0.8  # Maximum backward walking speed
-      joystick_max_sideways_velocity: 0.3  # Maximum sideways walking speed
+      joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
+      joystick_max_sideways_velocity: 0.5  # Maximum sideways walking speed
       joystick_max_turning_velocity: 1.0   # Maximum turning speed

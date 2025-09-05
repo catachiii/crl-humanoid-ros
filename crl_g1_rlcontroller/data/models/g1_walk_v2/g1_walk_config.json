@@ -1,5 +1,5 @@
 {
-  "model_name": "2025-09-02_22-34-40_walkrunv3-styles-1-4-1-vel.onnx",
+  "model_name": "2025-09-04_08-37-59_walkrunv3-styles-1-3-1-vel3.onnx",
   "num_obs": 96,
   "num_actions": 29,
   "num_history": 5,
