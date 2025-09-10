@@ -117,7 +117,7 @@ namespace crl::unitree::hardware::g1 {
             }
             return result;
         }
-        
+
         G1Node(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model,
                const std::shared_ptr<crl::humanoid::commons::RobotData>& data,
                const std::array<Machines, N>& monitoring,
@@ -532,11 +532,11 @@ namespace crl::unitree::hardware::g1 {
                 }
             }
 
-            // trigger estop if safe check failed
-            if (jointLimit && !this->data_->softEStop) {
-                RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
-                this->fsm_broadcaster.broadcast_switch(States::ESTOP);
-            }
+            // // trigger estop if safe check failed
+            // if (jointLimit && !this->data_->softEStop) {
+            //     RCLCPP_WARN(this->get_logger(), "Joint limit breached, switching to ESTOP");
+            //     this->fsm_broadcaster.broadcast_switch(States::ESTOP);
+            // }
 
             // populate joystick command to robot data
             {

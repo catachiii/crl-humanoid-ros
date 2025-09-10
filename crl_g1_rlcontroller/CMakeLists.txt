@@ -168,6 +168,12 @@ ament_target_dependencies(monitor_main_v2
     crl_ros_helper
 )
 
+# hardware_main_v2 executable
+add_executable(hardware_main_v2 src/hardware_main_v2.cpp)
+
+ament_target_dependencies(hardware_main_v2 crl_humanoid_hardware crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(hardware_main_v2 ${CRL_TARGET_NAME})
+
 # installations
 install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -184,7 +190,7 @@ install(
 )
 
 install(
-        TARGETS simulator_main hardware_main monitor_main simulator_main_v2 monitor_main_v2
+        TARGETS simulator_main hardware_main monitor_main simulator_main_v2 monitor_main_v2 hardware_main_v2
         DESTINATION lib/${PROJECT_NAME}
 )
 
