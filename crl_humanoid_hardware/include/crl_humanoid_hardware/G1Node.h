@@ -178,22 +178,22 @@ namespace crl::unitree::hardware::g1 {
     private:
         // Convert string to button constant
         uint16_t stringToButtonConstant(const std::string& buttonName) {
-            if (buttonName == "R1") return 1;
-            else if (buttonName == "L1") return 2;
-            else if (buttonName == "start") return 4;
-            else if (buttonName == "select") return 8;
-            else if (buttonName == "R2") return 16;
-            else if (buttonName == "L2") return 32;
-            else if (buttonName == "F1") return 64;
-            else if (buttonName == "F2") return 128;
-            else if (buttonName == "A") return 256;
-            else if (buttonName == "B") return 512;
-            else if (buttonName == "X") return 1024;
-            else if (buttonName == "Y") return 2048;
-            else if (buttonName == "up") return 4096;
-            else if (buttonName == "right") return 8192;
-            else if (buttonName == "down") return 16384;
-            else if (buttonName == "left") return 21768;
+            if (buttonName == "R1") return 1;  //0x1
+            else if (buttonName == "L1") return 2;  //0x2
+            else if (buttonName == "start") return 4;  //0x4
+            else if (buttonName == "select") return 8;  //0x8
+            else if (buttonName == "R2") return 16;  //0x10
+            else if (buttonName == "L2") return 32;  //0x20
+            else if (buttonName == "F1") return 64;  //0x40
+            else if (buttonName == "F2") return 128;  //0x80
+            else if (buttonName == "A") return 256;  //0x100
+            else if (buttonName == "B") return 512;  //0x200
+            else if (buttonName == "X") return 1024;  //0x400
+            else if (buttonName == "Y") return 2048;  //0x800
+            else if (buttonName == "up") return 4096; //0x1000
+            else if (buttonName == "right") return 8192; //0x2000
+            else if (buttonName == "down") return 16384; //0x4000
+            else if (buttonName == "left") return 32768; //0x8000
             else {
                 RCLCPP_WARN(this->get_logger(), "Unknown button name: %s, defaulting to A", buttonName.c_str());
                 return 256; // Default to A
