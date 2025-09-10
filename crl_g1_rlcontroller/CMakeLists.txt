@@ -134,6 +134,40 @@ ament_target_dependencies(monitor_main
     crl_ros_helper
 )
 
+# simulator_main_v2 executable
+add_executable(simulator_main_v2 src/simulator_main_v2.cpp)
+
+ament_target_dependencies(simulator_main_v2 crl_humanoid_simulator crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(simulator_main_v2 ${CRL_TARGET_NAME})
+
+# monitor_main_v2 executable
+add_executable(monitor_main_v2 src/monitor_main_v2.cpp)
+
+target_include_directories(monitor_main_v2 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${MUJOCO_INCLUDE_DIRS}
+)
+
+target_link_directories(monitor_main_v2 PRIVATE
+    ${MUJOCO_LIBRARY_DIRS}
+)
+
+# Link libraries for monitor_main_v2
+target_link_libraries(monitor_main_v2
+    ${MUJOCO_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    glfw
+)
+
+# ROS2 dependencies for monitor_main_v2
+ament_target_dependencies(monitor_main_v2
+    rclcpp
+    crl_humanoid_commons
+    crl_humanoid_monitor
+    crl_fsm
+    crl_ros_helper
+)
+
 # installations
 install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -150,7 +184,7 @@ install(
 )
 
 install(
-        TARGETS simulator_main hardware_main monitor_main
+        TARGETS simulator_main hardware_main monitor_main simulator_main_v2 monitor_main_v2
         DESTINATION lib/${PROJECT_NAME}
 )
 

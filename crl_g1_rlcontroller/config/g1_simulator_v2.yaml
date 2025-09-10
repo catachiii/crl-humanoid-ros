@@ -13,15 +13,45 @@
       time_step_size: 0.01667
       model: "/models/g1_walk_v2/g1_walk_config.json"
 
-  getup:
+  getup0:
     ros__parameters:
       time_step_size: 0.01667
-      model: "/models/g1_getup/g1_getup_config.json"
+      model: "/models/g1_getup0_v2/g1_getup_config.json"
+      # model: "/models/g1_getup01_v2/g1_getup_config.json"
+
+  crouch:
+    ros__parameters:
+      time_step_size: 0.02
+      duration: 1.0
+      target_joint_angles: [
+        -0.1000, -0.1000,
+        0.0000,
+        0.0000,  0.0000,
+        0.0000,
+        0.0000,  0.0000,
+        0.0000,
+        0.3000,  0.3000,
+        0.0000,  0.0000,
+        -0.2000, -0.2000,
+        1.4000, -1.4000,
+        0.0000,  0.0000,
+        1.2000, -1.2000,
+        0.8000,  0.8000,
+        0.0000,  0.0000,
+        0.0000,  0.0000,
+        0.0000,  0.0000
+      ]
+
+  getup1:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_getup1_v2/g1_getup_config.json"
+      # model: "/models/g1_getup01_v2/g1_getup_config.json"
 
   sitdown:
     ros__parameters:
       time_step_size: 0.01667
-      model: "/models/g1_sitdown/g1_sitdown_config.json"
+      model: "/models/g1_sitdown_v2/g1_sitdown_config.json"
 
   comm:
     ros__parameters:

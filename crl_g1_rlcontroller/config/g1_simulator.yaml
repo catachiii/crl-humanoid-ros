@@ -12,6 +12,7 @@
     ros__parameters:
       time_step_size: 0.01667
       model: "/models/g1_walk/g1_walk_config.json"
+      # model: "/models/g1_walk_v2/g1_walk_config.json"
 
   getup:
     ros__parameters:
@@ -37,3 +38,8 @@
       joystick_max_backward_velocity: 0.8  # Maximum backward walking speed
       joystick_max_sideways_velocity: 0.3  # Maximum sideways walking speed
       joystick_max_turning_velocity: 1.0   # Maximum turning speed
+      # joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
+      # joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
+      # joystick_max_sideways_velocity: 0.5  # Maximum sideways walking speed
+      # joystick_max_turning_velocity: 1.0   # Maximum turning speed
+

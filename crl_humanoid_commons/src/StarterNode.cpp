@@ -50,10 +50,8 @@ namespace crl::humanoid::commons {
         for (int i = 0; i < jointCount_; i++) {
             if (target == TargetMode::ZERO)
                 targetJointAngle_[i] = 0.0;
-            else if (target == TargetMode::STAND)
-                targetJointAngle_[i] = this->get_parameter("target_joint_angles").as_double_array()[i];
             else
-                RCLCPP_ERROR(this->get_logger(), "Unknown target mode.");
+                targetJointAngle_[i] = this->get_parameter("target_joint_angles").as_double_array()[i];
         }
     }
 

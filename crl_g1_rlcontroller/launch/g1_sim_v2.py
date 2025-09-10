@@ -22,14 +22,14 @@ def generate_launch_description():
         Node(
             package='crl_g1_rlcontroller',
             namespace='g1_sim',
-            executable='simulator_main',
+            executable='simulator_main_v2',
             parameters=[sim_config],
             arguments=['--model', 'g1']
         ),
         Node(
             package='crl_g1_rlcontroller',
             namespace='g1_sim',
-            executable='monitor_main',
+            executable='monitor_main_v2',
             parameters=[monitor_config],
             remappings=[
                 ('monitor_joystick', 'remote')
