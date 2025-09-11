@@ -34,22 +34,17 @@ int main(int argc, char** argv) {
     crl::fsm::Transition<States::CROUCH, States::STAND> tm52;     // CROUCH(5) -> STAND(2)
     crl::fsm::Transition<States::STAND, States::CROUCH> tm25;     // STAND(2) -> CROUCH(5)
     crl::fsm::Transition<States::CROUCH, States::ESTOP> tm51;     // CROUCH(5) -> ESTOP(1)
-    crl::fsm::Transition<States::ESTOP, States::CROUCH> tm15;     // ESTOP(1) -> CROUCH(5)
     crl::fsm::Transition<States::GETUP0, States::ESTOP> tm41;     // GETUP0(4) -> ESTOP(1)
     crl::fsm::Transition<States::GETUP0, States::STAND> tm42;     // GETUP0(4) -> STAND(2)
     crl::fsm::Transition<States::GETUP0, States::WALK> tm43;     // GETUP0(4) -> WALK(3)
     crl::fsm::Transition<States::STAND, States::GETUP0> tm24;     // STAND(2) -> GETUP0(4)
-    crl::fsm::Transition<States::WALK, States::GETUP0> tm34;     // WALK(3) -> GETUP0(4)
     crl::fsm::Transition<States::STAND, States::WALK> tm23;      // STAND(2) -> WALK(3)
     crl::fsm::Transition<States::WALK, States::ESTOP> tm31;      // WALK(3) -> ESTOP(1)
     crl::fsm::Transition<States::WALK, States::STAND> tm32;      // WALK(3) -> STAND(2)
     crl::fsm::Transition<States::GETUP1, States::ESTOP> tm61;     // GETUP1(6) -> ESTOP(1)
     crl::fsm::Transition<States::CROUCH, States::GETUP1> tm56;     // CROUCH(5) -> GETUP1(6)
-    crl::fsm::Transition<States::GETUP1, States::CROUCH> tm65;     // GETUP1(6) -> CROUCH(5)
     crl::fsm::Transition<States::GETUP1, States::STAND> tm62;     // GETUP1(6) -> STAND(2)
-    crl::fsm::Transition<States::STAND, States::GETUP1> tm26;     // STAND(2) -> GETUP1(6)
     crl::fsm::Transition<States::GETUP1, States::WALK> tm63;     // GETUP1(6) -> WALK(3)
-    crl::fsm::Transition<States::WALK, States::GETUP1> tm36;    // WALK(3) -> GETUP1(6)
     crl::fsm::Transition<States::WALK, States::SITDOWN> tm37;    // WALK(3) -> SITDOWN(7)
     crl::fsm::Transition<States::SITDOWN, States::STAND> tm72;   // SITDOWN(7) -> STAND(2)
     crl::fsm::Transition<States::SITDOWN, States::ESTOP> tm71;   // SITDOWN(7) -> ESTOP(1)
@@ -77,8 +72,8 @@ int main(int argc, char** argv) {
 
     auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3, m4, m5, m6, m7);
     constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(
-        tm12, tm21, tm52, tm25, tm51, tm15, tm41, tm42, tm43, tm24, tm34, tm23,
-        tm31, tm32, tm61, tm56, tm65, tm62, tm26, tm63, tm36, tm37, tm72, tm71);
+        tm12, tm21, tm52, tm25, tm51, tm41, tm42, tm43, tm24, tm23,
+        tm31, tm32, tm61, tm56, tm62, tm63, tm37, tm72, tm71);
 
     // init ros process
     rclcpp::init(argc, argv);
