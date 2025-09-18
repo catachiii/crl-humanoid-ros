@@ -1,0 +1,108 @@
+# G1 RL Controller Hardware Configuration
+# Network interface configuration for Unitree SDK communication
+/**:
+  estop:
+    ros__parameters:
+      time_step_size: 0.02
+
+  stand:
+    ros__parameters:
+      time_step_size: 0.02
+      duration: 1.0
+
+  walk:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_walk_v2/g1_walk_config.json"
+
+  getup0:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_getup0_v2/g1_getup_config.json"
+      # model: "/models/g1_getup01_v2/g1_getup_config.json"
+
+  crouch:
+    ros__parameters:
+      time_step_size: 0.02
+      duration: 1.0
+      target_joint_angles: [
+        -0.1000, -0.1000,
+        0.0000,
+        0.0000,  0.0000,
+        0.0000,
+        0.0000,  0.0000,
+        0.0000,
+        0.3000,  0.3000,
+        0.0000,  0.0000,
+        -0.2000, -0.2000,
+        1.4000, -1.4000,
+        0.0000,  0.0000,
+        1.2000, -1.2000,
+        0.8000,  0.8000,
+        0.0000,  0.0000,
+        0.0000,  0.0000,
+        0.0000,  0.0000
+      ]
+
+  getup1:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_getup1_v2/g1_getup_config.json"
+      # model: "/models/g1_getup01_v2/g1_getup_config.json"
+
+  sitdown:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_sitdown_v2/g1_sitdown_config.json"
+
+  deepmimic:
+    ros__parameters:
+      time_step_size: 0.01667
+      model: "/models/g1_fatemeh/g1_fatemeh_config.json"
+
+  comm:
+    ros__parameters:
+      time_step_size: 0.01
+      monitorPublisherQueueSize: 10
+      remoteSubscriberQueueSize: 10
+
+  robot:
+    ros__parameters:
+      time_step_size: 0.001667  # 600 hz
+      network_interface: "enx00133bfd284e"
+
+      joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
+      joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
+      joystick_max_sideways_velocity: 0.5  # Maximum sideways walking speed
+      joystick_max_turning_velocity: 1.0   # Maximum turning speed
+
+      # Keybinding configuration for state transitions
+      # Available modifier buttons: R1, L1, R2, L2, start, select, F1, F2
+      # Available action buttons: A, B, X, Y, up, down, left, right
+      keybinding_modifier: "L1"    # Modifier button to hold
+
+      # State keybindings - extended configuration for 5 states (same as simulator)
+      # NOTE: The states listed here must match the states defined in the hardware_main.cpp file
+      # Currently available states: ESTOP, STAND, WALK, GETUP, SITDOWN
+      state_keybindings:
+        states: ["ESTOP", "STAND", "WALK", "GETUP0", "CROUCH", "GETUP1", "SITDOWN", "DEEPMIMIC"]  # State names (must match enum in hardware_main.cpp)
+        keys:   ["B",     "A",     "X",    "left",   "Y",      "right",   "down",      "up"]       # Corresponding keys for each state
+
+      # Usage: Hold [modifier] + [state_key] to trigger state transition
+      # Examples:
+      # - Hold L1 + B to trigger ESTOP
+      # - Hold L1 + A to trigger STAND
+      # - Hold L1 + X to trigger WALK
+      # - Hold L1 + Y to trigger GETUP
+      # - Hold L1 + up to trigger SITDOWN
+      #
+      # To add more states:
+      # 1. First, update the crl_fsm_states macro in hardware_main.cpp to include new states
+      # 2. Add state machines and transitions in hardware_main.cpp
+      # 3. Update the state mapping in hardware_main.cpp
+      # 4. Then extend both arrays here
+
+      # Optional: Add other hardware-specific parameters here
+      # joint_stiffness_scale: 1.0
+      # joint_damping_scale: 1.0
+      # enable_safety_checks: true
