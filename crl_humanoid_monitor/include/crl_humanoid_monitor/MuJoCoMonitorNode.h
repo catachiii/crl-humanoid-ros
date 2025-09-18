@@ -52,17 +52,22 @@ namespace crl::humanoid::monitor {
         // Use static storage to ensure string lifetime
         static thread_local std::string state_str;
 
+        // Convert the underlying value to get the correct string representation
+        // The issue was that we were comparing enum instances instead of underlying values
+        typename States::UT stateValue = state.to_ut();
+
         // Dynamically handle all states defined in the enum
         for (std::size_t i = 0; i < States::num_params; ++i) {
-            if (States::from_ind(i) == state) {
+            auto enumFromIndex = States::from_ind(i);
+            if (enumFromIndex.to_ut() == stateValue) {
                 // Convert string_view to string and return c_str()
-                auto sv = States::from_ind(i).to_string();
+                auto sv = enumFromIndex.to_string();
                 state_str = std::string(sv);
                 return state_str.c_str();
             }
         }
 
-        RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(state));
+        RCLCPP_WARN(rclcpp::get_logger("monitor_app"), "Unknown state value: %d", static_cast<int>(stateValue));
         return "UNKNOWN";
     }
 

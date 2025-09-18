@@ -14,6 +14,7 @@
 #include <crl_g1_rlcontroller/CRLG1GetUpController.h>
 #include <crl_g1_rlcontroller/CRLG1SitDownController.h>
 #include <crl_g1_rlcontroller/CRLG1DeepMimicController.h>
+#include <crl_g1_rlcontroller/CRLG1DeepMimicControllerNode.h>
 #include <rclcpp/rclcpp.hpp>
 #include <cxxopts.hpp>
 
@@ -57,6 +58,12 @@ int main(int argc, char** argv) {
     crl::fsm::Transition<States::WALK, States::DEEPMIMIC> tm38; // WALK(3) -> DEEPMIMIC(8)
     crl::fsm::Transition<States::DEEPMIMIC, States::WALK> tm83; // DEEPMIMIC(8) -> WALK(3)
 
+    // transitions collection and monitoring list must be defined before state generators use them
+    constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(
+        tm12, tm21, tm52, tm25, tm51, tm41, tm42, tm43, tm24, tm23,
+        tm31, tm32, tm61, tm56, tm62, tm63, tm37, tm72, tm71, tm38, tm83);
+    std::array<Machines, 1> monitoring = {Machines::ONBOARD};
+
 
     // data
     const auto model = std::make_shared<crl::humanoid::commons::RobotModel>(crl::humanoid::commons::robotModels.at(modelName));
@@ -78,12 +85,18 @@ int main(int argc, char** argv) {
     auto m7 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::SITDOWN>(
         [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1SitDownController>>(model, data, "sitdown"); });
     auto m8 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::DEEPMIMIC>(
-        [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1DeepMimicController>>(model, data, "deepmimic"); });
+        [&]() {
+            auto deepMimicControllerNode = std::make_shared<crl::g1::rlcontroller::CRLG1DeepMimicControllerNode<States, Machines, 1>>(model, data, "deepmimic");
+            // Ensure FSM client is ready as soon as node is constructed
+            try {
+                deepMimicControllerNode->initializeFsmClient(t_cols, monitoring);
+            } catch (const std::exception& e) {
+                RCLCPP_ERROR(rclcpp::get_logger("hardware"), "Failed to initialize DeepMimic FSM client: %s", e.what());
+            }
+            return deepMimicControllerNode;
+        });
 
     auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3, m4, m5, m6, m7, m8);
-    constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(
-        tm12, tm21, tm52, tm25, tm51, tm41, tm42, tm43, tm24, tm23,
-        tm31, tm32, tm61, tm56, tm62, tm63, tm37, tm72, tm71, tm38, tm83);
 
     // Initialize ROS2
     rclcpp::init(argc, argv);

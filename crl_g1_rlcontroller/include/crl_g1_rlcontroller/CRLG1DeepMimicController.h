@@ -21,6 +21,16 @@ namespace crl::g1::rlcontroller {
 
         void computeAndApplyControlSignals(double dt) override;
 
+        /**
+         * Check if the deep mimic sequence is complete (phase >= 1.0)
+         */
+        bool isSequenceComplete() const;
+
+        /**
+         * Set whether to loop the sequence when it completes
+         */
+        void setLoopSequence(bool loop);
+
     private:
         // cache
         crl::dVector action_;
@@ -32,6 +42,8 @@ namespace crl::g1::rlcontroller {
         int numHistory_;
         double phase_;
         double phaseIncrement_;
+        bool sequenceCompleted_ = false;
+        bool loopSequence_ = false;
         crl::dVector defaultJointPos_;
         crl::dVector actionScale_;
         crl::dVector jointStiffness_;

@@ -8,7 +8,7 @@ namespace crl::g1::rlcontroller {
 
 
     template <typename ControllerT = CRLG1WalkController>
-    class CRLG1RLControllerNode final : public crl::humanoid::commons::ControllerNode<ControllerT> {
+    class CRLG1RLControllerNode : public crl::humanoid::commons::ControllerNode<ControllerT> {
     public:
         using Base = crl::humanoid::commons::ControllerNode<ControllerT>;
         CRLG1RLControllerNode(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model,
@@ -28,7 +28,7 @@ namespace crl::g1::rlcontroller {
 
         virtual ~CRLG1RLControllerNode() = default;
 
-    private:
+    protected:
         void controlCallbackImpl() override {
             // compute and apply control signals
             this->controller_->computeAndApplyControlSignals(this->timeStepSize_);

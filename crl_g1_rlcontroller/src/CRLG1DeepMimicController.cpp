@@ -99,9 +99,22 @@ void CRLG1DeepMimicController::computeAndApplyControlSignals(double dt) {
     }
     currentObs_[obsIndex++] = phase_;
     phase_ += phaseIncrement_;
-    
-    if (phase_ > 1.0) {
-        phase_ = 1.0;
+
+    if (phase_ >= 1.0) {
+        if (!sequenceCompleted_) {
+            sequenceCompleted_ = true;
+            RCLCPP_INFO(logger_, "Deep mimic sequence completed (phase reached 1.0). Ready to transition to WALK state.");
+        }
+
+        if (loopSequence_) {
+            // Reset phase to loop the sequence
+            phase_ = 0.0;
+            sequenceCompleted_ = false;  // Reset completion flag for next loop
+            RCLCPP_INFO(logger_, "Looping deep mimic sequence...");
+        } else {
+            // Keep at 1.0 (stop at completion)
+            phase_ = 1.0;
+        }
     }
 
     for (int i = 0; i < numHistory_ - 1; i++) {
@@ -139,6 +152,14 @@ void CRLG1DeepMimicController::computeAndApplyControlSignals(double dt) {
         control.jointControl[i].damping = jointDamping_[i];
     }
     data_->setControlSignal(control);
+}
+
+bool CRLG1DeepMimicController::isSequenceComplete() const {
+    return sequenceCompleted_;
+}
+
+void CRLG1DeepMimicController::setLoopSequence(bool loop) {
+    loopSequence_ = loop;
 }
 
 } // namespace crl::g1::rlcontroller
