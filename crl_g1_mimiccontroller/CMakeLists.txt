@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 
 # set name of the project
-project(crl_g1_rlcontroller)
+project(crl_g1_mimiccontroller)
 
 # set cxx standard and compiler flag
 set(CMAKE_CXX_STANDARD 17)
@@ -11,7 +11,7 @@ endif()
 
 # data folder path
 set(
-        CRL_G1_RLCONTROLLER_DATA_FOLDER
+        CRL_G1_MIMICCONTROLLER_DATA_FOLDER
         "\"${CMAKE_CURRENT_LIST_DIR}/data\""
         CACHE STRING ""
 )
@@ -68,6 +68,7 @@ file(
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1WalkController.cpp" #
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1GetUpController.cpp" #
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1SitDownController.cpp" #
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1DeepMimicController.cpp" #
 )
 
 # build library target
@@ -84,7 +85,7 @@ target_include_directories(
 # compile definitions
 target_compile_definitions(
         ${CRL_TARGET_NAME}
-        PUBLIC "CRL_G1_RLCONTROLLER_DATA_FOLDER=${CRL_G1_RLCONTROLLER_DATA_FOLDER}" #
+        PUBLIC "CRL_G1_MIMICCONTROLLER_DATA_FOLDER=${CRL_G1_MIMICCONTROLLER_DATA_FOLDER}" #
 )
 
 # add ros dependencies to library
@@ -94,85 +95,45 @@ ament_target_dependencies(${CRL_TARGET_NAME} crl_humanoid_commons onnxruntime)
 # executables
 # -----------------------------------------------------------------------------
 
-# simulator executable
-add_executable(simulator_main src/simulator_main.cpp)
+# hardware_main_deepmimic executable
+add_executable(hardware_main_deepmimic src/hardware_main_deepmimic.cpp)
 
-ament_target_dependencies(simulator_main crl_humanoid_simulator crl_humanoid_commons onnxruntime)
-target_link_libraries(simulator_main ${CRL_TARGET_NAME})
+ament_target_dependencies(hardware_main_deepmimic crl_humanoid_hardware crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(hardware_main_deepmimic ${CRL_TARGET_NAME})
 
-# hardware executable
-add_executable(hardware_main src/hardware_main.cpp)
+# simulator_main_deepmimic executable
+add_executable(simulator_main_deepmimic src/simulator_main_deepmimic.cpp)
 
-ament_target_dependencies(hardware_main crl_humanoid_hardware crl_humanoid_commons onnxruntime)
-target_link_libraries(hardware_main ${CRL_TARGET_NAME})
+ament_target_dependencies(simulator_main_deepmimic crl_humanoid_simulator crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(simulator_main_deepmimic ${CRL_TARGET_NAME})
 
-# monitor executable
-add_executable(monitor_main src/monitor_main.cpp)
+# monitor_main_deepmimic executable
+add_executable(monitor_main_deepmimic src/monitor_main_deepmimic.cpp)
 
-target_include_directories(monitor_main PRIVATE
+target_include_directories(monitor_main_deepmimic PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${MUJOCO_INCLUDE_DIRS}
 )
 
-target_link_directories(monitor_main PRIVATE
+target_link_directories(monitor_main_deepmimic PRIVATE
     ${MUJOCO_LIBRARY_DIRS}
 )
 
-# Link libraries for monitor
-target_link_libraries(monitor_main
+# Link libraries for monitor_main_deepmimic
+target_link_libraries(monitor_main_deepmimic
     ${MUJOCO_LIBRARIES}
     ${OPENGL_LIBRARIES}
     glfw
 )
 
-# ROS2 dependencies for monitor
-ament_target_dependencies(monitor_main
+# ROS2 dependencies for monitor_main_deepmimic
+ament_target_dependencies(monitor_main_deepmimic
     rclcpp
     crl_humanoid_commons
     crl_humanoid_monitor
     crl_fsm
     crl_ros_helper
 )
-
-# simulator_main_v2 executable
-add_executable(simulator_main_v2 src/simulator_main_v2.cpp)
-
-ament_target_dependencies(simulator_main_v2 crl_humanoid_simulator crl_humanoid_commons onnxruntime crl_fsm)
-target_link_libraries(simulator_main_v2 ${CRL_TARGET_NAME})
-
-# monitor_main_v2 executable
-add_executable(monitor_main_v2 src/monitor_main_v2.cpp)
-
-target_include_directories(monitor_main_v2 PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${MUJOCO_INCLUDE_DIRS}
-)
-
-target_link_directories(monitor_main_v2 PRIVATE
-    ${MUJOCO_LIBRARY_DIRS}
-)
-
-# Link libraries for monitor_main_v2
-target_link_libraries(monitor_main_v2
-    ${MUJOCO_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-    glfw
-)
-
-# ROS2 dependencies for monitor_main_v2
-ament_target_dependencies(monitor_main_v2
-    rclcpp
-    crl_humanoid_commons
-    crl_humanoid_monitor
-    crl_fsm
-    crl_ros_helper
-)
-
-# hardware_main_v2 executable
-add_executable(hardware_main_v2 src/hardware_main_v2.cpp)
-
-ament_target_dependencies(hardware_main_v2 crl_humanoid_hardware crl_humanoid_commons onnxruntime crl_fsm)
-target_link_libraries(hardware_main_v2 ${CRL_TARGET_NAME})
 
 # installations
 install(
@@ -190,7 +151,7 @@ install(
 )
 
 install(
-        TARGETS simulator_main hardware_main monitor_main simulator_main_v2 monitor_main_v2 hardware_main_v2
+        TARGETS hardware_main_deepmimic simulator_main_deepmimic monitor_main_deepmimic
         DESTINATION lib/${PROJECT_NAME}
 )
 

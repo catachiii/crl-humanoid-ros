@@ -9,7 +9,7 @@ crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char ** argv)
 {
-  // This should have the same FSM logic as in crl_g1_rlcontroller simulator_main.cpp
+  // This should have the same FSM logic as in crl_g1_mimiccontroller simulator_main.cpp
   // transitions - matching the G1 RL controller FSM
   crl::fsm::Transition<States::ESTOP, States::STAND> tm12;     // ESTOP(1) -> STAND(2)
   crl::fsm::Transition<States::STAND, States::ESTOP> tm21;     // STAND(2) -> ESTOP(1)

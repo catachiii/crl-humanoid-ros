@@ -1,4 +1,4 @@
-#include "crl_g1_rlcontroller/CRLG1DeepMimicController.h"
+#include "crl_g1_mimiccontroller/CRLG1DeepMimicController.h"
 #include <filesystem>
 #include <fstream>
 #include <string>

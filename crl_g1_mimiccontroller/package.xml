@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>crl_g1_mimiccontroller</name>
+  <version>0.1.0</version>
+  <description>Merged package for Unitree G1 DeepMimic controller commons and simulator.</description>
+  <maintainer email="kangd@inf.ethz.ch">Dongho Kang</maintainer>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
+  <license>ETH Computational Robotics Lab</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>rclcpp</build_depend>
+  <build_depend>crl_humanoid_commons</build_depend>
+  <build_depend>onnxruntime</build_depend>
+  <build_depend>crl_humanoid_simulator</build_depend>
+  <build_depend>crl_humanoid_hardware</build_depend>
+  <build_depend>crl_humanoid_monitor</build_depend>
+  <build_depend>crl_fsm</build_depend>
+  <build_depend>crl_ros_helper</build_depend>
+
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>crl_humanoid_commons</exec_depend>
+  <exec_depend>onnxruntime</exec_depend>
+  <exec_depend>crl_humanoid_simulator</exec_depend>
+  <exec_depend>crl_humanoid_hardware</exec_depend>
+  <exec_depend>crl_humanoid_monitor</exec_depend>
+  <exec_depend>crl_fsm</exec_depend>
+  <exec_depend>crl_ros_helper</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

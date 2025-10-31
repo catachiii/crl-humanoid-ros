@@ -5,12 +5,12 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_simulator/G1SimNode.h>
-#include <crl_g1_rlcontroller/CRLG1RLControllerNode.h>
-#include <crl_g1_rlcontroller/CRLG1DeepMimicControllerNode.h>
-#include <crl_g1_rlcontroller/CRLG1WalkController.h>
-#include <crl_g1_rlcontroller/CRLG1GetUpController.h>
-#include <crl_g1_rlcontroller/CRLG1SitDownController.h>
-#include <crl_g1_rlcontroller/CRLG1DeepMimicController.h>
+#include <crl_g1_mimiccontroller/CRLG1RLControllerNode.h>
+#include <crl_g1_mimiccontroller/CRLG1DeepMimicControllerNode.h>
+#include <crl_g1_mimiccontroller/CRLG1WalkController.h>
+#include <crl_g1_mimiccontroller/CRLG1GetUpController.h>
+#include <crl_g1_mimiccontroller/CRLG1SitDownController.h>
+#include <crl_g1_mimiccontroller/CRLG1DeepMimicController.h>
 #include <cxxopts.hpp>
 
 

@@ -1,8 +1,8 @@
 #ifndef CRL_G1_DEEPMIMICCONTROLLERNODE_H
 #define CRL_G1_DEEPMIMICCONTROLLERNODE_H
 
-#include "crl_g1_rlcontroller/CRLG1RLControllerNode.h"
-#include "crl_g1_rlcontroller/CRLG1DeepMimicController.h"
+#include "crl_g1_mimiccontroller/CRLG1RLControllerNode.h"
+#include "crl_g1_mimiccontroller/CRLG1DeepMimicController.h"
 #include "crl_fsm/client.h"
 
 namespace crl::g1::rlcontroller {
