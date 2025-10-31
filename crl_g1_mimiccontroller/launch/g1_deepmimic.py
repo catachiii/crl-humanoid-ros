@@ -6,27 +6,27 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     monitor_config = os.path.join(
-        get_package_share_directory("crl_g1_rlcontroller"),
+        get_package_share_directory("crl_g1_mimiccontroller"),
         'config',
         'g1_monitor.yaml'
     )
 
     hardware_config = os.path.join(
-        get_package_share_directory("crl_g1_rlcontroller"),
+        get_package_share_directory("crl_g1_mimiccontroller"),
         'config',
         'g1_hardware_deepmimic.yaml'
     )
 
     return LaunchDescription([
         Node(
-            package='crl_g1_rlcontroller',
+            package='crl_g1_mimiccontroller',
             namespace='g1_hardware',
             executable='hardware_main_deepmimic',
             parameters=[hardware_config],
             arguments=['--model', 'g1']
         ),
         Node(
-            package='crl_g1_rlcontroller',
+            package='crl_g1_mimiccontroller',
             namespace='g1_hardware',
             executable='monitor_main_deepmimic',
             parameters=[monitor_config],
