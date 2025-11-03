@@ -1,6 +1,6 @@
 {
-  "model_name": "model_10000.onnx",
-  "motion_name": "tennis_all_total/tennis1-0-forehand_augmented_total_state.csv",
+  "model_name": "model_10000_isdone.onnx",
+  "motion_name": "tennis_all_total/tennis2-4-backhand_augmented_total_state.csv",
   "num_obs": 286,
   "num_actions": 29,
   "num_history": 5,

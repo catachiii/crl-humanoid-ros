@@ -57,6 +57,7 @@
     ros__parameters:
       time_step_size: 0.01667
       model: "/models/g1_tennis/g1_tennis_config.json"
+      auto_transition: true
 
   comm:
     ros__parameters:
