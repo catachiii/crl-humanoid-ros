@@ -7,7 +7,7 @@
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
 #include <rclcpp/logger.hpp>
 
-namespace crl::g1::rlcontroller {
+namespace crl::g1::mimiccontroller {
 
     class CRLG1SitDownController : public crl::humanoid::commons::LocomotionController {
     public:
@@ -50,6 +50,6 @@ namespace crl::g1::rlcontroller {
 
     };
 
-}  // namespace crl::g1::rlcontroller
+}  // namespace crl::g1::mimiccontroller
 
 #endif  // CRL_G1_SITDOWNCONTROLLER_H

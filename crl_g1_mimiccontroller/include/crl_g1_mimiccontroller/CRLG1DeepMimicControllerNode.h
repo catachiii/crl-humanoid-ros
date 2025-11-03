@@ -5,7 +5,7 @@
 #include "crl_g1_mimiccontroller/CRLG1DeepMimicController.h"
 #include "crl_fsm/client.h"
 
-namespace crl::g1::rlcontroller {
+namespace crl::g1::mimiccontroller {
 
     /**
      * Specialized controller node for CRLG1DeepMimicController that can trigger
@@ -105,6 +105,6 @@ namespace crl::g1::rlcontroller {
         bool transitionAttempted_ = false;
     };
 
-}  // namespace crl::g1::rlcontroller
+}  // namespace crl::g1::mimiccontroller
 
 #endif  // CRL_G1_DEEPMIMICCONTROLLERNODE_H

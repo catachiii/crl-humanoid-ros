@@ -70,18 +70,18 @@ int main(int argc, char** argv) {
     auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
         [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
     auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
-        [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1WalkController>>(model, data, "walk"); });
+        [&]() { return std::make_shared<crl::g1::mimiccontroller::CRLG1RLControllerNode<crl::g1::mimiccontroller::CRLG1WalkController>>(model, data, "walk"); });
     auto m4 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::GETUP0>(
-        [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1GetUpController>>(model, data, "getup0"); });
+        [&]() { return std::make_shared<crl::g1::mimiccontroller::CRLG1RLControllerNode<crl::g1::mimiccontroller::CRLG1GetUpController>>(model, data, "getup0"); });
     auto m5 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::CROUCH>(
         [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::CROUCH, model, data, "crouch"); });
     auto m6 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::GETUP1>(
-        [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1GetUpController>>(model, data, "getup1"); });
+        [&]() { return std::make_shared<crl::g1::mimiccontroller::CRLG1RLControllerNode<crl::g1::mimiccontroller::CRLG1GetUpController>>(model, data, "getup1"); });
     auto m7 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::SITDOWN>(
-        [&]() { return std::make_shared<crl::g1::rlcontroller::CRLG1RLControllerNode<crl::g1::rlcontroller::CRLG1SitDownController>>(model, data, "sitdown"); });
+        [&]() { return std::make_shared<crl::g1::mimiccontroller::CRLG1RLControllerNode<crl::g1::mimiccontroller::CRLG1SitDownController>>(model, data, "sitdown"); });
     auto m8 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::DEEPMIMIC>(
         [&]() {
-                auto deepMimicControllerNode = std::make_shared<crl::g1::rlcontroller::CRLG1DeepMimicControllerNode<States, Machines, 1>>(model, data, "deepmimic");
+                auto deepMimicControllerNode = std::make_shared<crl::g1::mimiccontroller::CRLG1DeepMimicControllerNode<States, Machines, 1>>(model, data, "deepmimic");
             // Ensure FSM client is ready as soon as node is constructed
             try {
                 deepMimicControllerNode->initializeFsmClient(t_cols, monitoring);

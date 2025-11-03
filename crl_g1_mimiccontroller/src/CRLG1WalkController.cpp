@@ -5,7 +5,7 @@
 #include <cmath>
 #include <crl-basic/utils/mathDefs.h>
 
-namespace crl::g1::rlcontroller {
+namespace crl::g1::mimiccontroller {
 
 CRLG1WalkController::CRLG1WalkController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
                                          const std::shared_ptr<crl::humanoid::commons::RobotData> &data,
@@ -137,4 +137,4 @@ void CRLG1WalkController::computeAndApplyControlSignals(double dt) {
     data_->setControlSignal(control);
 }
 
-} // namespace crl::g1::rlcontroller
+} // namespace crl::g1::mimiccontroller

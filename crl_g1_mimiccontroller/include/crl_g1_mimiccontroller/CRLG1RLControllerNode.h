@@ -4,7 +4,7 @@
 #include "crl_g1_mimiccontroller/CRLG1WalkController.h"
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
 
-namespace crl::g1::rlcontroller {
+namespace crl::g1::mimiccontroller {
 
 
     template <typename ControllerT = CRLG1WalkController>
@@ -35,6 +35,6 @@ namespace crl::g1::rlcontroller {
         }
     };
 
-}  // namespace crl::g1::rlcontroller
+}  // namespace crl::g1::mimiccontroller
 
 #endif  // CRL_G1_RLCONTROLLER_CONTROLLERNODE_H

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <crl-basic/utils/mathDefs.h>
 
-namespace crl::g1::rlcontroller {
+namespace crl::g1::mimiccontroller {
 
 CRLG1DeepMimicController::CRLG1DeepMimicController(const std::shared_ptr<crl::humanoid::commons::RobotModel> &model,
                                          const std::shared_ptr<crl::humanoid::commons::RobotData> &data,
@@ -162,4 +162,4 @@ void CRLG1DeepMimicController::setLoopSequence(bool loop) {
     loopSequence_ = loop;
 }
 
-} // namespace crl::g1::rlcontroller
+} // namespace crl::g1::mimiccontroller
