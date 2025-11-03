@@ -69,6 +69,7 @@ file(
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1GetUpController.cpp" #
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1SitDownController.cpp" #
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1DeepMimicController.cpp" #
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CRLG1DeepTrackController.cpp" #
 )
 
 # build library target
@@ -101,11 +102,23 @@ add_executable(hardware_main_deepmimic src/hardware_main_deepmimic.cpp)
 ament_target_dependencies(hardware_main_deepmimic crl_humanoid_hardware crl_humanoid_commons onnxruntime crl_fsm)
 target_link_libraries(hardware_main_deepmimic ${CRL_TARGET_NAME})
 
+# hardware_main_deeptrack executable
+add_executable(hardware_main_deeptrack src/hardware_main_deeptrack.cpp)
+
+ament_target_dependencies(hardware_main_deeptrack crl_humanoid_hardware crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(hardware_main_deeptrack ${CRL_TARGET_NAME})
+
 # simulator_main_deepmimic executable
 add_executable(simulator_main_deepmimic src/simulator_main_deepmimic.cpp)
 
 ament_target_dependencies(simulator_main_deepmimic crl_humanoid_simulator crl_humanoid_commons onnxruntime crl_fsm)
 target_link_libraries(simulator_main_deepmimic ${CRL_TARGET_NAME})
+
+# simulator_main_deeptrack executable
+add_executable(simulator_main_deeptrack src/simulator_main_deeptrack.cpp)
+
+ament_target_dependencies(simulator_main_deeptrack crl_humanoid_simulator crl_humanoid_commons onnxruntime crl_fsm)
+target_link_libraries(simulator_main_deeptrack ${CRL_TARGET_NAME})
 
 # monitor_main_deepmimic executable
 add_executable(monitor_main_deepmimic src/monitor_main_deepmimic.cpp)
@@ -135,6 +148,34 @@ ament_target_dependencies(monitor_main_deepmimic
     crl_ros_helper
 )
 
+# monitor_main_deeptrack executable
+add_executable(monitor_main_deeptrack src/monitor_main_deeptrack.cpp)
+
+target_include_directories(monitor_main_deeptrack PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${MUJOCO_INCLUDE_DIRS}
+)
+
+target_link_directories(monitor_main_deeptrack PRIVATE
+    ${MUJOCO_LIBRARY_DIRS}
+)
+
+# Link libraries for monitor_main_deeptrack
+target_link_libraries(monitor_main_deeptrack
+        ${MUJOCO_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        glfw
+)
+
+# ROS2 dependencies for monitor_main_deeptrack
+ament_target_dependencies(monitor_main_deeptrack
+        rclcpp
+        crl_humanoid_commons
+        crl_humanoid_monitor
+        crl_fsm
+        crl_ros_helper
+)
+
 # installations
 install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -151,7 +192,7 @@ install(
 )
 
 install(
-        TARGETS hardware_main_deepmimic simulator_main_deepmimic monitor_main_deepmimic
+        TARGETS hardware_main_deepmimic simulator_main_deepmimic monitor_main_deepmimic hardware_main_deeptrack simulator_main_deeptrack monitor_main_deeptrack
         DESTINATION lib/${PROJECT_NAME}
 )
 
