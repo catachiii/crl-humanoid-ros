@@ -28,7 +28,13 @@ def generate_launch_description():
             package='crl_humanoid_monitor',
             namespace='g1_sim',
             executable='monitor',
-            parameters=[monitor_config],
+            parameters=[
+                monitor_config,
+                {
+                    'model': 'g1',
+                    'robot_xml_file': 'g1_description/scene_crl.xml'
+                }
+            ],
             remappings=[
                 ('monitor_joystick', 'remote')
             ]

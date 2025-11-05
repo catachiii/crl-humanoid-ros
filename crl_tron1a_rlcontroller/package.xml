@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>crl_tron1a_rlcontroller</name>
+  <version>0.1.0</version>
+  <description>Tron1A RL controllers integrated with CRL Humanoid stack.</description>
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>crl_humanoid_commons</depend>
+  <depend>crl_fsm</depend>
+  <depend>crl_ros_helper</depend>
+
+  <!-- If you link ONNX Runtime, add a find_package or vendor package and declare it here -->
+  <!-- <depend>onnxruntime</depend> -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

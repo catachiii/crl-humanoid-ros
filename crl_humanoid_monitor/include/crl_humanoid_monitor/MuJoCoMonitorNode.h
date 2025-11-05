@@ -85,33 +85,14 @@ namespace crl::humanoid::monitor {
                               const std::string& nodeName = "mujoco_monitor")
             : crl::ros::Node(nodeName), monitoring_(monitoring), trans_cont_(trans_cont), fsmClient_(to_monitor, trans_cont, monitoring) {
 
+
             // params
             auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
             paramDesc.description = "MuJoCo monitor parameters";
             paramDesc.read_only = true;
-            
-            // Declare model parameter first
-            this->declare_parameter<std::string>("model", "wf_tron1a", paramDesc);
-            
-            // Read model parameter to determine which defaults to use
-            std::string modelParam = this->get_parameter("model").as_string();
-            std::string defaultXmlFile;
-            
-            if (modelParam == "wf_tron1a") {
-                defaultXmlFile = "wf_tron1a_description/xml/scene_crl.xml";
-            } else {
-                // Default to G1
-                defaultXmlFile = "g1_description/scene_crl.xml";
-            }
-            
-            // Declare robot_xml_file with model-specific default
-            this->declare_parameter<std::string>("robot_xml_file", defaultXmlFile, paramDesc);
-
-            // Debug: Log all parameters
-            RCLCPP_INFO(this->get_logger(), "Node name: %s", this->get_name());
-            RCLCPP_INFO(this->get_logger(), "Model parameter: %s", this->get_parameter("model").as_string().c_str());
-            RCLCPP_INFO(this->get_logger(), "robot_xml_file parameter: %s (default was: %s)", 
-                       this->get_parameter("robot_xml_file").as_string().c_str(), defaultXmlFile.c_str());
+            // Neutral defaults; YAML/launch should override
+            this->declare_parameter<std::string>("model", "g1", paramDesc);
+            this->declare_parameter<std::string>("robot_xml_file", "g1_description/scene_crl.xml", paramDesc);
 
             // Initialize ROS2 clients
             restartServiceClient_ = this->create_client<crl_humanoid_msgs::srv::Restart>("restart");
@@ -137,6 +118,22 @@ namespace crl::humanoid::monitor {
 
             if (!rclcpp::ok()) {
                 return false;
+            }
+
+            // Debug: show node identity and current parameter values (post-YAML load)
+            RCLCPP_INFO(this->get_logger(), "FQN: %s | node: %s", this->get_fully_qualified_name(), this->get_name());
+            RCLCPP_INFO(this->get_logger(), "Param check -> model: %s | robot_xml_file: %s",
+                        this->get_parameter("model").as_string().c_str(),
+                        this->get_parameter("robot_xml_file").as_string().c_str());
+            // Optionally list parameters visible to this node
+            {
+                auto listed = this->list_parameters({}, 1);
+                std::string names;
+                for (const auto &n : listed.names) {
+                    if (!names.empty()) names += ", ";
+                    names += n;
+                }
+                RCLCPP_INFO(this->get_logger(), "Visible parameters: [%s]", names.c_str());
             }
 
             // get model type
