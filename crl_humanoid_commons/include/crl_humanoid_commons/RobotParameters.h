@@ -14,7 +14,7 @@
 namespace crl::humanoid::commons {
 
     enum class RobotModelType {
-        UNKNOWN = -1, UNITREE_G1 = 0
+        UNKNOWN = -1, UNITREE_G1 = 0, LIMX_WF_TRON1A = 1,
     };
 
     struct RobotModel {
@@ -177,6 +177,52 @@ namespace crl::humanoid::commons {
                                 0.4, 0.4,
                                 0.4, 0.4,
                                 0.4, 0.4,
+                            }
+                    },
+            },
+            {// Limx WF_TRON1A
+                    "WF_TRON1A",
+                    {
+                            RobotModelType::LIMX_WF_TRON1A,
+                            {
+                                // joint names (from URDF)
+                                "abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "wheel_L_Joint",
+                                "abad_R_Joint", "hip_R_Joint", "knee_R_Joint", "wheel_R_Joint"
+                            },
+                            {
+                                // defaultJointConf (provided by you)
+                                0.0, 0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0, 0.0
+                            },
+                            {
+                                // jointPosMax (upper limits from URDF)
+                                1.39626, 1.396263, 1.361357, 1000000.0,
+                                0.38397, 1.012291, 0.872665, 1000000.0
+                            },
+                            {
+                                // jointPosMin (lower limits from URDF)
+                                -0.38397, -1.012291, -0.872665, -1000000.0,
+                                -1.39626, -1.396263, -1.361357, -1000000.0
+                            },
+                            {
+                                // jointVelMax (velocity from URDF)
+                                15.0, 15.0, 15.0, 40.0,
+                                15.0, 15.0, 15.0, 40.0
+                            },
+                            {
+                                // jointTorqueMax (effort from URDF)
+                                80.0, 80.0, 80.0, 40.0,
+                                80.0, 80.0, 80.0, 40.0
+                            },
+                            {
+                                // jointStiffnessDefault (from control.yaml / Python)
+                                42.0, 42.0, 42.0, 0.0,
+                                42.0, 42.0, 42.0, 0.0
+                            },
+                            {
+                                // jointDampingDefault (from control.yaml / Python)
+                                2.5, 2.5, 2.5, 0.8,
+                                2.5, 2.5, 2.5, 0.8
                             }
                     },
             },

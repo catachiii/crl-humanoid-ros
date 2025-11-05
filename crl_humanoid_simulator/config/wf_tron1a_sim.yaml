@@ -1,0 +1,24 @@
+/**:
+  estop:
+    ros__parameters:
+      time_step_size: 0.02
+
+  stand:
+    ros__parameters:
+      time_step_size: 0.02
+      duration: 1.0
+
+  controller:
+    ros__parameters:
+      time_step_size: 0.002
+
+  comm:
+    ros__parameters:
+      time_step_size: 0.01
+      monitorPublisherQueueSize: 10
+      remoteSubscriberQueueSize: 10
+
+  robot:
+    ros__parameters:
+      time_step_size: 0.001667  # sim rate
+      robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"

@@ -10,6 +10,7 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_simulator/G1SimNode.h>
+#include <crl_humanoid_simulator/WF_TRON1ASimNode.h>
 #include <rclcpp/rclcpp.hpp>
 #include <cxxopts.hpp>
 
@@ -25,6 +26,8 @@ int main(int argc, char** argv) {
     std::string modelName = "G1";
     if (result["model"].as<std::string>() == "g1") {
         modelName = "G1";
+    } else if (result["model"].as<std::string>() == "wf_tron1a") {
+        modelName = "WF_TRON1A";
     } else {
         RCLCPP_WARN(rclcpp::get_logger("sim"), "Unknown robot model: %s", result["model"].as<std::string>().c_str());
     }
@@ -62,9 +65,11 @@ int main(int argc, char** argv) {
 
     // Create robot node (MuJoCo simulation is integrated into SimNode)
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
-    std::shared_ptr<crl::humanoid::simulator::G1SimNode<States, Machines, 1>> robotNode;
+    std::shared_ptr<crl::humanoid::commons::RobotNode<States, Machines, 1>> robotNode;
     if (modelName == "G1") {
         robotNode = std::make_shared<crl::humanoid::simulator::G1SimNode<States, Machines, 1>>(model, data, monitoring, machine.is_transitioning());
+    } else if (modelName == "WF_TRON1A") {
+        robotNode = std::make_shared<crl::humanoid::simulator::WF_TRON1ASimNode<States, Machines, 1>>(model, data, monitoring, machine.is_transitioning());
     } else {
         RCLCPP_ERROR(rclcpp::get_logger("sim"), "Unsupported robot model: %s", modelName.c_str());
     }

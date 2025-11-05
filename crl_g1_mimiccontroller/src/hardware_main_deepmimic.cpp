@@ -104,6 +104,7 @@ int main(int argc, char** argv) {
     // init ros process
     auto machine = crl::fsm::make_fsm<Machines, Machines::ONBOARD>("robot", States::ESTOP, s_cols, t_cols);
 
+
     // Create robot node (real hardware communication) - using G1Node instead of G1SimNode
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
     std::shared_ptr<crl::unitree::hardware::g1::G1Node<States, Machines, 1>> robotNode;

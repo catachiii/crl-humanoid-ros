@@ -9,6 +9,7 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_hardware/G1Node.h>
+#include <crl_humanoid_hardware/Tron1aNode.h>
 #include <rclcpp/rclcpp.hpp>
 #include <cxxopts.hpp>
 
@@ -25,6 +26,8 @@ int main(int argc, char** argv) {
     std::string modelName = "G1";
     if (result["model"].as<std::string>() == "g1") {
         modelName = "G1";
+    } else if (result["model"].as<std::string>() == "wf_tron1a") {
+        modelName = "WF_TRON1A";
     } else {
         RCLCPP_WARN(rclcpp::get_logger("hardware"), "Unknown robot model: %s", result["model"].as<std::string>().c_str());
     }
@@ -61,7 +64,7 @@ int main(int argc, char** argv) {
 
     // Create robot node (real hardware communication)
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
-    std::shared_ptr<crl::unitree::hardware::g1::G1Node<States, Machines, 1>> robotNode;
+    std::shared_ptr<crl::humanoid::commons::RobotNode<States, Machines, 1>> robotNode;
 
     if (modelName == "G1") {
         // Create state name to enum mapping for G1Node
@@ -73,6 +76,18 @@ int main(int argc, char** argv) {
         });
 
         robotNode = std::make_shared<G1NodeType>(
+            model, data, monitoring, machine.is_transitioning(), stateMapping);
+    }
+    else if (modelName == "WF_TRON1A") {
+        // Create state name to enum mapping for Tron1aNode
+        using Tron1aNodeType = crl::unitree::hardware::wf_tron1a::Tron1aNode<States, Machines, 1>;
+        auto stateMapping = Tron1aNodeType::createStateMapping({
+            {"ESTOP", States::ESTOP},
+            {"STAND", States::STAND},
+            {"WALK", States::WALK}
+        });
+
+        robotNode = std::make_shared<Tron1aNodeType>(
             model, data, monitoring, machine.is_transitioning(), stateMapping);
     } else {
         RCLCPP_ERROR(rclcpp::get_logger("hardware"), "Unsupported robot model: %s", modelName.c_str());

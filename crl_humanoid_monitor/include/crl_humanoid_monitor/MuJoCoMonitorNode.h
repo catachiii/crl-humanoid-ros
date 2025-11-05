@@ -89,15 +89,35 @@ namespace crl::humanoid::monitor {
             auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
             paramDesc.description = "MuJoCo monitor parameters";
             paramDesc.read_only = true;
-            this->declare_parameter<std::string>("model", "g1", paramDesc);
-            this->declare_parameter<std::string>("robot_xml_file", "g1_description/scene_crl.xml", paramDesc);
+            
+            // Declare model parameter first
+            this->declare_parameter<std::string>("model", "wf_tron1a", paramDesc);
+            
+            // Read model parameter to determine which defaults to use
+            std::string modelParam = this->get_parameter("model").as_string();
+            std::string defaultXmlFile;
+            
+            if (modelParam == "wf_tron1a") {
+                defaultXmlFile = "wf_tron1a_description/xml/scene_crl.xml";
+            } else {
+                // Default to G1
+                defaultXmlFile = "g1_description/scene_crl.xml";
+            }
+            
+            // Declare robot_xml_file with model-specific default
+            this->declare_parameter<std::string>("robot_xml_file", defaultXmlFile, paramDesc);
+
+            // Debug: Log all parameters
+            RCLCPP_INFO(this->get_logger(), "Node name: %s", this->get_name());
+            RCLCPP_INFO(this->get_logger(), "Model parameter: %s", this->get_parameter("model").as_string().c_str());
+            RCLCPP_INFO(this->get_logger(), "robot_xml_file parameter: %s (default was: %s)", 
+                       this->get_parameter("robot_xml_file").as_string().c_str(), defaultXmlFile.c_str());
 
             // Initialize ROS2 clients
             restartServiceClient_ = this->create_client<crl_humanoid_msgs::srv::Restart>("restart");
             elasticBandServiceClient_ = this->create_client<crl_humanoid_msgs::srv::ElasticBand>("elastic_band");
 
-            // Initialize MuJoCo
-            initializeMuJoCo();
+            // Note: MuJoCo initialization is delayed until initializeNode() when parameters are fully loaded
         }
 
         ~BaseMuJoCoMonitorNode() override {
@@ -120,12 +140,18 @@ namespace crl::humanoid::monitor {
             }
 
             // get model type
-            if (this->get_parameter("model").as_string() == "g1") {
+            std::string modelParam = this->get_parameter("model").as_string();
+            if (modelParam == "g1") {
                 modelType_ = crl::humanoid::commons::RobotModelType::UNITREE_G1;
+            } else if (modelParam == "wf_tron1a") {
+                modelType_ = crl::humanoid::commons::RobotModelType::LIMX_WF_TRON1A;
             } else {
-                RCLCPP_WARN(this->get_logger(), "Unknown model type");
+                RCLCPP_WARN(this->get_logger(), "Unknown model type: %s", modelParam.c_str());
                 return false;
             }
+
+            // Initialize MuJoCo now that parameters are loaded
+            initializeMuJoCo();
 
             data_ = std::make_shared<RobotDataType>();
 
@@ -693,16 +719,22 @@ namespace crl::humanoid::monitor {
          */
         void initializeMuJoCo() {
             // Load the same model as the simulator
-            std::string xmlPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/" +
-                                  this->get_parameter("robot_xml_file").as_string();
+            std::string robotXmlFileParam = this->get_parameter("robot_xml_file").as_string();
+            std::string xmlPath = std::string(CRL_HUMANOID_COMMONS_DATA_FOLDER) + "/robots/" + robotXmlFileParam;
+
+            RCLCPP_INFO(this->get_logger(), "Loading MuJoCo model from: %s (parameter value: %s)", 
+                       xmlPath.c_str(), robotXmlFileParam.c_str());
 
             char error[1000];
             mujocoModel_ = mj_loadXML(xmlPath.c_str(), nullptr, error, sizeof(error));
 
             if (!mujocoModel_) {
-                RCLCPP_ERROR(this->get_logger(), "Failed to load MuJoCo model: %s", error);
+                RCLCPP_ERROR(this->get_logger(), "Failed to load MuJoCo model from %s: %s", xmlPath.c_str(), error);
                 return;
             }
+
+            RCLCPP_INFO(this->get_logger(), "Successfully loaded MuJoCo model with %d bodies, %d joints", 
+                       mujocoModel_->nbody, mujocoModel_->njnt);
 
             // Create MuJoCo data
             mujocoData_ = mj_makeData(mujocoModel_);
@@ -751,23 +783,37 @@ namespace crl::humanoid::monitor {
             mujocoData_->qpos[5] = state.baseOrientation.y();
             mujocoData_->qpos[6] = state.baseOrientation.z();
 
-            // MuJoCo joint order (same as in SimNode.h)
-            std::vector<std::string> mujocoJointOrder = {
-                // Left leg (6 DOF)
-                "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint",
-                "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
-                // Right leg (6 DOF)
-                "right_hip_pitch_joint", "right_hip_roll_joint", "right_hip_yaw_joint",
-                "right_knee_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
-                // Waist (3 DOF)
-                "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint",
-                // Left arm (7 DOF)
-                "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint",
-                "left_elbow_joint", "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
-                // Right arm (7 DOF)
-                "right_shoulder_pitch_joint", "right_shoulder_roll_joint", "right_shoulder_yaw_joint",
-                "right_elbow_joint", "right_wrist_roll_joint", "right_wrist_pitch_joint", "right_wrist_yaw_joint"
-            };
+            // MuJoCo joint order (same as in SimNode.h) - conditional based on model type
+            std::vector<std::string> mujocoJointOrder;
+            if (modelType_ == crl::humanoid::commons::RobotModelType::UNITREE_G1) {
+                // G1 joint order (29 joints)
+                mujocoJointOrder = {
+                    // Left leg (6 DOF)
+                    "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint",
+                    "left_knee_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
+                    // Right leg (6 DOF)
+                    "right_hip_pitch_joint", "right_hip_roll_joint", "right_hip_yaw_joint",
+                    "right_knee_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
+                    // Waist (3 DOF)
+                    "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint",
+                    // Left arm (7 DOF)
+                    "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint",
+                    "left_elbow_joint", "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint",
+                    // Right arm (7 DOF)
+                    "right_shoulder_pitch_joint", "right_shoulder_roll_joint", "right_shoulder_yaw_joint",
+                    "right_elbow_joint", "right_wrist_roll_joint", "right_wrist_pitch_joint", "right_wrist_yaw_joint"
+                };
+            } else if (modelType_ == crl::humanoid::commons::RobotModelType::LIMX_WF_TRON1A) {
+                // TRON1A joint order (8 joints)
+                mujocoJointOrder = {
+                    "abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "wheel_L_Joint",
+                    "abad_R_Joint", "hip_R_Joint", "knee_R_Joint", "wheel_R_Joint"
+                };
+            } else {
+                RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                                    "Unknown model type in monitor, cannot determine joint order");
+                return;
+            }
 
             // Update joint positions with proper mapping (starting after base DOFs)
             int jointStartIndex = 7; // 3 pos + 4 quat for floating base

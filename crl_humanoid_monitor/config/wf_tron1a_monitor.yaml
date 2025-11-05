@@ -1,0 +1,4 @@
+mujoco_monitor:
+  ros__parameters:
+    model: "wf_tron1a"
+    robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"
