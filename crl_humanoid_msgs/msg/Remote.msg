@@ -1,3 +1,9 @@
+float32 position_x
+float32 position_y
+float32 position_z
+float32 orientation_roll
+float32 orientation_pitch
+float32 orientation_yaw
 float32 speed_forward
 float32 speed_sideways
 float32 speed_turning

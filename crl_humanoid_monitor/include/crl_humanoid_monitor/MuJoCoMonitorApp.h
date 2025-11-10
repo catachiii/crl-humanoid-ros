@@ -148,6 +148,7 @@ namespace crl::humanoid::monitor {
                     }
                 }
 
+                
                 // Render simple status text overlay
                 try {
                     renderTextOverlay(width, height);
@@ -213,19 +214,19 @@ namespace crl::humanoid::monitor {
                         // Play/Pause
                         processIsRunning_ = !processIsRunning_;
                         break;
-                    case GLFW_KEY_R:
-                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "R key pressed - Restart");
+                    case GLFW_KEY_Z:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "Z key pressed - Restart");
                         if (runnerNode_) {
                             runnerNode_->restart();
                         }
                         break;
-                    case GLFW_KEY_H:
-                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "H key pressed - Toggle info");
+                    case GLFW_KEY_N:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "N key pressed - Toggle info");
                         // Toggle info display
                         showInfo_ = !showInfo_;
                         break;
-                    case GLFW_KEY_F:
-                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "F key pressed - Toggle FSM overlay");
+                    case GLFW_KEY_M:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "M key pressed - Toggle FSM overlay");
                         // Toggle FSM overlay
                         showFsmOverlay_ = !showFsmOverlay_;
                         break;
@@ -236,8 +237,8 @@ namespace crl::humanoid::monitor {
                             runnerNode_->toggleElasticBand();
                         }
                         break;
-                    case GLFW_KEY_T:
-                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "T key pressed - Toggle camera follow");
+                    case GLFW_KEY_V:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "V key pressed - Toggle camera follow");
                         // Toggle camera follow mode
                         toggleCameraFollow();
                         break;
@@ -273,43 +274,119 @@ namespace crl::humanoid::monitor {
                     case GLFW_KEY_W:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "W key pressed - Forward");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(0.1, 0.0, 0.0); // Forward
+                            runnerNode_->incrementSpeedCommand(0.1, 0.0, 0.0); // Forward
                         }
                         break;
                     case GLFW_KEY_S:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "S key pressed - Backward");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(-0.1, 0.0, 0.0); // Backward
+                            runnerNode_->incrementSpeedCommand(-0.1, 0.0, 0.0); // Backward
                         }
                         break;
                     case GLFW_KEY_A:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "A key pressed - Left");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(0.0, 0.1, 0.0); // Left
+                            runnerNode_->incrementSpeedCommand(0.0, 0.1, 0.0); // Left
                         }
                         break;
                     case GLFW_KEY_D:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "D key pressed - Right");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(0.0, -0.1, 0.0); // Right
+                            runnerNode_->incrementSpeedCommand(0.0, -0.1, 0.0); // Right
                         }
                         break;
                     case GLFW_KEY_Q:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "Q key pressed - Turn Left");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(0.0, 0.0, 0.1); // Turn left
+                            runnerNode_->incrementSpeedCommand(0.0, 0.0, 0.1); // Turn left
                         }
                         break;
                     case GLFW_KEY_E:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "E key pressed - Turn Right");
                         if (runnerNode_) {
-                            runnerNode_->incrementCommand(0.0, 0.0, -0.1); // Turn right
+                            runnerNode_->incrementSpeedCommand(0.0, 0.0, -0.1); // Turn right
+                        }
+                        break;
+                    // Position control keys (IJKLUO for XYZ adjustments, X to stop)
+                    case GLFW_KEY_I:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "I key pressed - Position X Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(1.0, 0.0, 0.0); // X increase
+                        }
+                        break;
+                    case GLFW_KEY_K:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "K key pressed - Position X Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(-1.0, 0.0, 0.0); // X decrease
+                        }
+                        break;
+                    case GLFW_KEY_J:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "J key pressed - Position Y Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(0.0, 1.0, 0.0); // Y increase
+                        }
+                        break;
+                    case GLFW_KEY_L:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "L key pressed - Position Y Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(0.0, -1.0, 0.0); // Y decrease
+                        }
+                        break;
+                    case GLFW_KEY_U:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "U key pressed - Position Z Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(0.0, 0.0, 1.0); // Z increase
+                        }
+                        break;
+                    case GLFW_KEY_O:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "O key pressed - Position Z Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementPositionCommand(0.0, 0.0, -1.0); // Z decrease
+                        }
+                        break;
+                    // orientation control with RTYFGH
+                    case GLFW_KEY_F:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "F key pressed - Orientation Roll Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(0.5, 0.0, 0.0); // Roll increase
+                        }
+                        break;
+                    case GLFW_KEY_H:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "H key pressed - Orientation Roll Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(-0.5, 0.0, 0.0); // Roll decrease
+                        }
+                        break;
+                    case GLFW_KEY_T:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "T key pressed - Orientation Pitch Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(0.0, 0.5, 0.0); // Pitch increase
+                        }
+                        break;
+                    case GLFW_KEY_G:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "G key pressed - Orientation Pitch Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(0.0, -0.5, 0.0); // Pitch decrease
+                        }
+                        break;
+                    case GLFW_KEY_Y:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "Y key pressed - Orientation Yaw Increase");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(0.0, 0.0, 0.5); // Yaw increase
+                        }
+                        break;
+                    case GLFW_KEY_R:
+                        RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "R key pressed - Orientation Yaw Decrease");
+                        if (runnerNode_) {
+                            runnerNode_->incrementOrientationCommand(0.0, 0.0, -0.5); // Yaw decrease
                         }
                         break;
                     case GLFW_KEY_X:
                         RCLCPP_INFO(rclcpp::get_logger("monitor_app"), "X key pressed - Stop (Reset Commands)");
                         if (runnerNode_) {
-                            runnerNode_->setCommand(0.0, 0.0, 0.0); // Stop all movement
+                            runnerNode_->setPositionCommand(0.0, 0.0, 0.0); // Reset position command
+                            runnerNode_->setOrientationCommand(0.0, 0.0, 0.0); // Reset orientation command
+                            runnerNode_->setSpeedCommand(0.0, 0.0, 0.0); // Stop all movement
                         }
                         break;
                 }
@@ -514,8 +591,8 @@ namespace crl::humanoid::monitor {
             glColor4f(0.0f, 0.0f, 0.0f, 0.7f); // Semi-transparent black
             glVertex2f(10, 10);
             glVertex2f(380, 10);
-            glVertex2f(380, 520); // Increased height to accommodate all controls
-            glVertex2f(10, 520);
+            glVertex2f(380, 825); // Increased height to accommodate all controls
+            glVertex2f(10, 825);
             glEnd();
 
             // Draw connection status indicator
@@ -565,78 +642,136 @@ namespace crl::humanoid::monitor {
                              20.0f / width, 1.0f - 120.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "R - Restart Robot", &context,
+                    mjr_text(mjFONT_NORMAL, "Z - Restart Robot", &context,
                              20.0f / width, 1.0f - 145.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "F - Toggle FSM Overlay", &context,
+                    mjr_text(mjFONT_NORMAL, "N - Toggle Info Display", &context,
                              20.0f / width, 1.0f - 170.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "M - Toggle FSM Overlay", &context,
+                             20.0f / width, 1.0f - 195.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // Show elastic band status and control
                     bool elasticBandEnabled = runnerNode_ ? runnerNode_->isElasticBandEnabled() : false;
                     std::string elasticText = "B - Elastic Band: " + std::string(elasticBandEnabled ? "ON" : "OFF");
                     mjr_text(mjFONT_NORMAL, elasticText.c_str(), &context,
-                             20.0f / width, 1.0f - 195.0f / height,
+                             20.0f / width, 1.0f - 220.0f / height,
                              elasticBandEnabled ? 0.0f : 0.8f, elasticBandEnabled ? 1.0f : 0.8f, 0.8f);
 
                     // Show camera follow status and control
-                    std::string followText = "T - Camera Follow: " + std::string(cameraFollowEnabled_ ? "ON" : "OFF");
+                    std::string followText = "V - Camera Follow: " + std::string(cameraFollowEnabled_ ? "ON" : "OFF");
                     mjr_text(mjFONT_NORMAL, followText.c_str(), &context,
-                             20.0f / width, 1.0f - 220.0f / height,
+                             20.0f / width, 1.0f - 245.0f / height,
                              cameraFollowEnabled_ ? 0.0f : 0.8f, cameraFollowEnabled_ ? 1.0f : 0.8f, 0.8f);
 
                     mjr_text(mjFONT_NORMAL, "ESC - Exit", &context,
-                             20.0f / width, 1.0f - 245.0f / height,
+                             20.0f / width, 1.0f - 270.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // Movement controls section
                     mjr_text(mjFONT_NORMAL, "MOVEMENT CONTROLS:", &context,
-                             20.0f / width, 1.0f - 280.0f / height,
+                             20.0f / width, 1.0f - 305.0f / height,
                              1.0f, 1.0f, 1.0f);
 
                     mjr_text(mjFONT_NORMAL, "W/S - Forward/Backward", &context,
-                             20.0f / width, 1.0f - 305.0f / height,
-                             0.8f, 0.8f, 0.8f);
-
-                    mjr_text(mjFONT_NORMAL, "A/D - Strafe Left/Right", &context,
                              20.0f / width, 1.0f - 330.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "Q/E - Turn Left/Right", &context,
+                    mjr_text(mjFONT_NORMAL, "A/D - Strafe Left/Right", &context,
                              20.0f / width, 1.0f - 355.0f / height,
                              0.8f, 0.8f, 0.8f);
 
-                    mjr_text(mjFONT_NORMAL, "X - Stop (Reset Commands)", &context,
+                    mjr_text(mjFONT_NORMAL, "Q/E - Turn Left/Right", &context,
                              20.0f / width, 1.0f - 380.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    // Position controls section
+                    mjr_text(mjFONT_NORMAL, "POSITION CONTROLS:", &context,
+                             20.0f / width, 1.0f - 415.0f / height,
+                             1.0f, 1.0f, 1.0f);
+
+                    mjr_text(mjFONT_NORMAL, "I/K - Position X +/-", &context,
+                             20.0f / width, 1.0f - 440.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "J/L - Position Y +/-", &context,
+                             20.0f / width, 1.0f - 465.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "U/O - Position Z +/-", &context,
+                             20.0f / width, 1.0f - 490.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    // Orientation controls section
+                    mjr_text(mjFONT_NORMAL, "ORIENTATION CONTROLS:", &context,
+                             20.0f / width, 1.0f - 525.0f / height,
+                             1.0f, 1.0f, 1.0f);
+
+                    mjr_text(mjFONT_NORMAL, "F/H - Roll +/-", &context,
+                             20.0f / width, 1.0f - 550.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "T/G - Pitch +/-", &context,
+                             20.0f / width, 1.0f - 575.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "Y/R - Yaw +/-", &context,
+                             20.0f / width, 1.0f - 600.0f / height,
+                             0.8f, 0.8f, 0.8f);
+
+                    mjr_text(mjFONT_NORMAL, "X - Stop (Reset Commands)", &context,
+                             20.0f / width, 1.0f - 625.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // Current command display
                     auto command = runnerNode_->getCommand();
                     std::ostringstream cmdStream;
                     cmdStream << std::fixed << std::setprecision(2);
-                    cmdStream << "Current CMD: F=" << command.targetForwardSpeed
+                    cmdStream << "Current Speed CMD: F=" << command.targetForwardSpeed
                               << " S=" << command.targetSidewaysSpeed
                               << " T=" << command.targetTurningSpeed;
                     mjr_text(mjFONT_NORMAL, cmdStream.str().c_str(), &context,
-                             20.0f / width, 1.0f - 405.0f / height,
+                             20.0f / width, 1.0f - 650.0f / height,
+                             0.0f, 1.0f, 1.0f); // Cyan color
+
+                    // Current position command
+                    std::ostringstream posStream;
+                    posStream << std::fixed << std::setprecision(2);
+                    posStream << "Current Pos CMD: X=" << command.targetPositionX
+                              << " Y=" << command.targetPositionY
+                              << " Z=" << command.targetPositionZ;
+                    mjr_text(mjFONT_NORMAL, posStream.str().c_str(), &context,
+                             20.0f / width, 1.0f - 675.0f / height,
+                             0.0f, 1.0f, 1.0f); // Cyan color
+
+                    // Current orientation command
+                    std::ostringstream oriStream;
+                    oriStream << std::fixed << std::setprecision(2);
+                    oriStream << "Current Ori CMD: R=" << command.targetOrientationRoll
+                              << " P=" << command.targetOrientationPitch
+                              << " Y=" << command.targetOrientationYaw;
+                    mjr_text(mjFONT_NORMAL, oriStream.str().c_str(), &context,
+                             20.0f / width, 1.0f - 700.0f / height,
                              0.0f, 1.0f, 1.0f); // Cyan color
 
                     // Mouse controls section
                     mjr_text(mjFONT_NORMAL, "MOUSE CONTROLS:", &context,
-                             20.0f / width, 1.0f - 440.0f / height,
+                             20.0f / width, 1.0f - 735.0f / height,
                              1.0f, 1.0f, 1.0f);
 
                     mjr_text(mjFONT_NORMAL, "Left Mouse - Rotate Camera", &context,
-                             20.0f / width, 1.0f - 465.0f / height,
+                             20.0f / width, 1.0f - 760.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     mjr_text(mjFONT_NORMAL, "Middle Mouse - Pan Camera", &context,
-                             20.0f / width, 1.0f - 490.0f / height,
+                             20.0f / width, 1.0f - 785.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     mjr_text(mjFONT_NORMAL, "Scroll Wheel - Zoom", &context,
-                             20.0f / width, 1.0f - 515.0f / height,
+                             20.0f / width, 1.0f - 810.0f / height,
                              0.8f, 0.8f, 0.8f);
 
                     // FSM overlay

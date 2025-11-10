@@ -67,12 +67,24 @@ namespace crl::humanoid::commons {
     }
 
     inline void populateRemoteMessageFromData(const RobotCommand& data, crl_humanoid_msgs::msg::Remote& remote) {
+        remote.position_x = data.targetPositionX;
+        remote.position_y = data.targetPositionY;
+        remote.position_z = data.targetPositionZ;
+        remote.orientation_roll = data.targetOrientationRoll;
+        remote.orientation_pitch = data.targetOrientationPitch;
+        remote.orientation_yaw = data.targetOrientationYaw;
         remote.speed_forward = data.targetForwardSpeed;
         remote.speed_sideways = data.targetSidewaysSpeed;
         remote.speed_turning = data.targetTurningSpeed;
     }
 
     inline void populateDataFromRemoteMessage(const crl_humanoid_msgs::msg::Remote& remote, RobotCommand& data) {
+        data.targetPositionX = remote.position_x;
+        data.targetPositionY = remote.position_y;
+        data.targetPositionZ = remote.position_z;
+        data.targetOrientationRoll = remote.orientation_roll;
+        data.targetOrientationPitch = remote.orientation_pitch;
+        data.targetOrientationYaw = remote.orientation_yaw;
         data.targetForwardSpeed = remote.speed_forward;
         data.targetSidewaysSpeed = remote.speed_sideways;
         data.targetTurningSpeed = remote.speed_turning;

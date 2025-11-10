@@ -175,6 +175,146 @@ namespace crl::humanoid::monitor {
         }
 
         /**
+         * Add RGB arrows representing a coordinate frame to the MuJoCo scene.
+         * @param position The position of the frame origin [x, y, z]
+         * @param orientation The orientation quaternion [w, x, y, z]
+         * @param arrowLength The length of the arrows
+         */
+        void addCoordinateFrameArrows(const double position[3], const double orientation[4], double arrowLength = 0.2) {
+            // Extensive safety checks
+            if (!mujocoModel_ || !mujocoData_) {
+                return;
+            }
+
+            // Check if we have enough space (need 3 slots)
+            if (scene_.ngeom > scene_.maxgeom - 3) {
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Not enough space in scene for arrows (ngeom=%d, maxgeom=%d)",
+                                    scene_.ngeom, scene_.maxgeom);
+                return;
+            }
+
+            // Validate input parameters
+            if (!position || !orientation) {
+                RCLCPP_ERROR(this->get_logger(), "Null position or orientation passed to addCoordinateFrameArrows");
+                return;
+            }
+
+            // Validate quaternion is not degenerate
+            double qnorm = sqrt(orientation[0]*orientation[0] + orientation[1]*orientation[1] +
+                               orientation[2]*orientation[2] + orientation[3]*orientation[3]);
+            if (qnorm < 0.9 || qnorm > 1.1) {
+                RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Invalid quaternion norm: %f", qnorm);
+                return;
+            }
+
+            // Convert quaternion to rotation matrix
+            double rotMatrix[9];
+            mju_quat2Mat(rotMatrix, orientation);
+
+            // Define axis vectors in local frame (unit vectors along X, Y, Z)
+            double axes[3][3] = {
+                {1.0, 0.0, 0.0},  // X-axis (Red)
+                {0.0, 1.0, 0.0},  // Y-axis (Green)
+                {0.0, 0.0, 1.0}   // Z-axis (Blue)
+            };
+
+            // RGB colors for each axis (brighter colors)
+            float colors[3][4] = {
+                {1.0f, 0.2f, 0.2f, 1.0f},  // Brighter Red for X
+                {0.2f, 1.0f, 0.2f, 1.0f},  // Brighter Green for Y
+                {0.2f, 0.2f, 1.0f, 1.0f}   // Brighter Blue for Z
+            };
+
+            // Add an arrow for each axis
+            for (int i = 0; i < 3; ++i) {
+                // Double-check we still have space
+                if (scene_.ngeom >= scene_.maxgeom) {
+                    RCLCPP_WARN(this->get_logger(), "Scene full while adding arrow %d", i);
+                    break;
+                }
+
+                mjvGeom* geom = &scene_.geoms[scene_.ngeom++];
+
+                // Initialize all fields to safe defaults
+                std::memset(geom, 0, sizeof(mjvGeom));
+
+                // Set geom type to arrow
+                geom->type = mjGEOM_ARROW;
+                geom->dataid = -1;
+                geom->objtype = mjOBJ_UNKNOWN;
+                geom->objid = -1;
+                geom->category = mjCAT_DECOR;
+                geom->emission = 1.0;    // Full emission for maximum brightness
+                geom->specular = 0.0;    // Maximum specular
+                geom->shininess = 1.0;   // Maximum shininess
+                geom->reflectance = 0.0;
+                geom->label[0] = '\0';
+
+                // Rotate the axis vector by the orientation matrix
+                double axisWorld[3];
+                mju_mulMatVec(axisWorld, rotMatrix, axes[i], 3, 3);
+
+                // Calculate arrow start and end points
+                double from[3] = {position[0], position[1], position[2]};
+                double to[3] = {
+                    position[0] + axisWorld[0] * arrowLength,
+                    position[1] + axisWorld[1] * arrowLength,
+                    position[2] + axisWorld[2] * arrowLength
+                };
+
+                // Set arrow midpoint position
+                geom->pos[0] = from[0];
+                geom->pos[1] = from[1];
+                geom->pos[2] = from[2];
+
+                // Calculate direction vector
+                double dir[3] = {
+                    to[0] - from[0],
+                    to[1] - from[1],
+                    to[2] - from[2]
+                };
+
+                // Normalize direction
+                double length = sqrt(dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2]);
+                if (length > 1e-10) {
+                    dir[0] /= length;
+                    dir[1] /= length;
+                    dir[2] /= length;
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "Zero-length arrow axis %d", i);
+                    scene_.ngeom--; // Remove this geom
+                    continue;
+                }
+
+                // Convert direction to quaternion (arrow points along z-axis in local frame)
+                double quat[4];
+                mju_quatZ2Vec(quat, dir);
+
+                // Convert quaternion to rotation matrix (double precision)
+                double matDouble[9];
+                mju_quat2Mat(matDouble, quat);
+
+                // Copy to geom->mat (which is float precision)
+                for (int j = 0; j < 9; ++j) {
+                    geom->mat[j] = static_cast<float>(matDouble[j]);
+                }
+
+                // Set arrow size (make them larger and more visible)
+                geom->size[0] = arrowLength * 0.05;  // Arrow shaft radius
+                geom->size[1] = arrowLength * 0.05;  // Arrow head radius
+                geom->size[2] = arrowLength;   // Half-length
+
+                // Set color
+                geom->rgba[0] = colors[i][0];
+                geom->rgba[1] = colors[i][1];
+                geom->rgba[2] = colors[i][2];
+                geom->rgba[3] = colors[i][3];
+            }
+        }
+
+        /**
          * Render the MuJoCo scene to the current OpenGL context.
          */
         void render() {
@@ -190,6 +330,26 @@ namespace crl::humanoid::monitor {
 
                 // Update scene
                 mjv_updateScene(mujocoModel_, mujocoData_, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
+
+                // Add target frame visualization (RGB arrows)
+                // Get target position and orientation from command
+                double targetPos[3] = {
+                    commandUI_.targetPositionX,
+                    commandUI_.targetPositionY,
+                    commandUI_.targetPositionZ
+                };
+
+                // Convert roll-pitch-yaw to quaternion (already in radians)
+                double targetQuat[4];
+                double euler[3] = {
+                    commandUI_.targetOrientationRoll,
+                    commandUI_.targetOrientationPitch,
+                    commandUI_.targetOrientationYaw
+                };
+                mju_euler2Quat(targetQuat, euler, "XYZ");
+
+                // Draw coordinate frame arrows at target location
+                addCoordinateFrameArrows(targetPos, targetQuat, 0.3);
 
                 // Render scene
                 mjrRect viewport_rect = {0, 0, viewport[2], viewport[3]};
@@ -224,6 +384,12 @@ namespace crl::humanoid::monitor {
                 // fsmClient_.broadcast_switch(States::ESTOP);
 
                 // Reset UI command values
+                commandUI_.targetPositionX = 0;
+                commandUI_.targetPositionY = 0;
+                commandUI_.targetPositionZ = 0;
+                commandUI_.targetOrientationRoll = 0;
+                commandUI_.targetOrientationPitch = 0;
+                commandUI_.targetOrientationYaw = 0;
                 commandUI_.targetForwardSpeed = 0;
                 commandUI_.targetSidewaysSpeed = 0;
                 commandUI_.targetTurningSpeed = 0;
@@ -403,9 +569,89 @@ namespace crl::humanoid::monitor {
         }
 
         /**
+         * Set command position and orientation directly.
+         */
+        void setPositionCommand(double positionX, double positionY, double positionZ) {
+            commandUI_.targetPositionX = positionX;
+            commandUI_.targetPositionY = positionY;
+            commandUI_.targetPositionZ = positionZ;
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
+         * Increment command position by the given deltas.
+         */
+        void incrementPositionCommand(double deltaX, double deltaY, double deltaZ) {
+            commandUI_.targetPositionX += deltaX;
+            commandUI_.targetPositionY += deltaY;
+            commandUI_.targetPositionZ += deltaZ;
+
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
+         * Set command orientation directly.
+         */
+        void setOrientationCommand(double roll, double pitch, double yaw) {
+            commandUI_.targetOrientationRoll = roll;
+            commandUI_.targetOrientationPitch = pitch;
+            commandUI_.targetOrientationYaw = yaw;
+
+            // wrap all to (-pi, pi]
+            if (commandUI_.targetOrientationRoll > M_PI) {
+                commandUI_.targetOrientationRoll -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationRoll <= -M_PI) {
+                commandUI_.targetOrientationRoll += 2 * M_PI;
+            }
+            if (commandUI_.targetOrientationPitch > M_PI) {
+                commandUI_.targetOrientationPitch -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationPitch <= -M_PI) {
+                commandUI_.targetOrientationPitch += 2 * M_PI;
+            }
+            if (commandUI_.targetOrientationYaw > M_PI) {
+                commandUI_.targetOrientationYaw -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationYaw <= -M_PI) {
+                commandUI_.targetOrientationYaw += 2 * M_PI;
+            }
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
+         * Increment command orientation by the given deltas.
+         */
+        void incrementOrientationCommand(double deltaRoll, double deltaPitch, double deltaYaw) {
+            commandUI_.targetOrientationRoll += deltaRoll;
+            commandUI_.targetOrientationPitch += deltaPitch;
+            commandUI_.targetOrientationYaw += deltaYaw;
+
+            // wrap all to (-pi, pi]
+            if (commandUI_.targetOrientationRoll > M_PI) {
+                commandUI_.targetOrientationRoll -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationRoll <= -M_PI) {
+                commandUI_.targetOrientationRoll += 2 * M_PI;
+            }
+            if (commandUI_.targetOrientationPitch > M_PI) {
+                commandUI_.targetOrientationPitch -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationPitch <= -M_PI) {
+                commandUI_.targetOrientationPitch += 2 * M_PI;
+            }
+            if (commandUI_.targetOrientationYaw > M_PI) {
+                commandUI_.targetOrientationYaw -= 2 * M_PI;
+            } else if (commandUI_.targetOrientationYaw <= -M_PI) {
+                commandUI_.targetOrientationYaw += 2 * M_PI;
+            }
+
+            // Publish the updated command
+            publishRemoteCommands();
+        }
+
+        /**
          * Set command speed values directly.
          */
-        void setCommand(double forwardSpeed, double sidewaysSpeed, double turningSpeed) {
+        void setSpeedCommand(double forwardSpeed, double sidewaysSpeed, double turningSpeed) {
             commandUI_.targetForwardSpeed = forwardSpeed;
             commandUI_.targetSidewaysSpeed = sidewaysSpeed;
             commandUI_.targetTurningSpeed = turningSpeed;
@@ -416,7 +662,7 @@ namespace crl::humanoid::monitor {
         /**
          * Increment command speed values by the given deltas.
          */
-        void incrementCommand(double deltaForward, double deltaSideways, double deltaTurning) {
+        void incrementSpeedCommand(double deltaForward, double deltaSideways, double deltaTurning) {
             commandUI_.targetForwardSpeed += deltaForward;
             commandUI_.targetSidewaysSpeed += deltaSideways;
             commandUI_.targetTurningSpeed += deltaTurning;

@@ -27,6 +27,12 @@ namespace crl::humanoid::commons {
 
         // reset command
         auto comm = data_->getCommand();
+        comm.targetPositionX = 0;
+        comm.targetPositionY = 0;
+        comm.targetPositionZ = 0;
+        comm.targetOrientationRoll = 0;
+        comm.targetOrientationPitch = 0;
+        comm.targetOrientationYaw = 0;
         comm.targetForwardSpeed = 0;
         comm.targetSidewaysSpeed = 0;
         comm.targetTurningSpeed = 0;

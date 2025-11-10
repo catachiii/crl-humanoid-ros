@@ -24,6 +24,12 @@ namespace crl::humanoid::commons {
      * user command
      */
     struct RobotCommand {
+        double targetPositionX = 0;
+        double targetPositionY = 0;
+        double targetPositionZ = 0;
+        double targetOrientationRoll = 0;
+        double targetOrientationPitch = 0;
+        double targetOrientationYaw = 0;
         double targetForwardSpeed = 0;
         double targetSidewaysSpeed = 0;
         double targetTurningSpeed = 0;

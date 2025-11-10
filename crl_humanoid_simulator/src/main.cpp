@@ -5,6 +5,7 @@
 #include <crl_fsm/fsm.h>
 #include <crl_humanoid_commons/RobotData.h>
 #include <crl_humanoid_commons/nodes/ControllerNode.h>
+#include <crl_humanoid_commons/nodes/PyControllerNode.h>
 #include <crl_humanoid_commons/nodes/EstopNode.h>
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
         [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
     auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
         [&]() { return std::make_shared<crl::humanoid::commons::ControllerNode<>>(model, data); });
+        // [&]() { return std::make_shared<crl::humanoid::commons::PyControllerNode>(model, data); });  # tested
 
     auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3);
     constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);
