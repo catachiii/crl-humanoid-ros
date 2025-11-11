@@ -140,7 +140,7 @@ namespace crl::humanoid::simulator {
                                                     mujocoData_->qvel[1],
                                                     mujocoData_->qvel[2]);
 
-            // Base angular velocity (world frame) - for floating base, next 3 elements are angular velocity
+            // Base angular velocity (root frame) - for floating base, next 3 elements are angular velocity
             groundTruthState.baseAngularVelocity = crl::V3D(mujocoData_->qvel[3],
                                                             mujocoData_->qvel[4],
                                                             mujocoData_->qvel[5]);
