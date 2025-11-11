@@ -1,10 +1,5 @@
 # crl-humanoid-ros
 
-TODOs:
-1. add hardware SDK for ROS packages
-2. add maximal velocity in the params
-
-
 Code for CRL's humanoids (unitree G1, pnd adam, limx tron1)
 
 ## Dependencies
@@ -49,11 +44,8 @@ sudo apt install \
 Additional middleware packages for Unitree G1 hardware:
 
 ```bash
-sudo apt install ros-humble-rmw-cyclonedds-cpp
-sudo apt install ros-humble-rosidl-generator-dds-idl
+sudo apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
 ```
-
-
 
 ### ONNX Runtime (for RL controller)
 - [onnxruntime](https://onnxruntime.ai/) 1.15.0
@@ -162,47 +154,8 @@ sudo ldconfig
 
 For convenience, you can install all dependencies with:
 
-
-  libboost-all-dev
-  libeigen3-dev
-  nlohmann-json3-dev
-  libcxxopts-dev
-  libglfw3-dev
-  freeglut3-dev
-  mesa-utils
-  libgl1-mesa-glx
-  libgl1-mesa-dri
-```
-
-### Installing MuJoCo 3.3.5
-
-MuJoCo is required for the monitor GUI and simulator packages:
-
 ```bash
-# Download and install MuJoCo 3.3.5
-cd /tmp
-wget https://github.com/google-deepmind/mujoco/releases/download/3.3.5/mujoco-3.3.5-linux-x86_64.tar.gz
-tar -xzf mujoco-3.3.5-linux-x86_64.tar.gz
-sudo mv mujoco-3.3.5 /opt/mujoco
-
-# Create symlinks for system library
-sudo ln -s /opt/mujoco/lib/libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so.3.3.5
-sudo ln -s libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so
-
-# Update library cache
-sudo ldconfig
-```
-
-**Note:** You do not need to create a pkg-config file for MuJoCo. The build system uses hardcoded paths for MuJoCo and does not require pkg-config.
-
-### Quick Installation Script
-
-For convenience, you can install all dependencies with:
-
-```bash
-# Install additional ROS2 Humble packages (if not already installed)
-```bash
-# Install additional ROS2 Humble packages (if not already installed)
+# Install ROS2 Humble packages
 sudo apt update
 sudo apt install -y \
     ros-humble-rosidl-default-generators \
@@ -230,26 +183,44 @@ sudo apt install -y \
     mesa-utils \
     libgl1-mesa-glx \
     libgl1-mesa-dri
-
-# Install MuJoCo (run the MuJoCo installation commands above)
 ```
+
+Then install MuJoCo and ONNX Runtime following the detailed instructions above.
+
+### Python Environment Setup (for Goal Controller)
+
+The `crl_g1_goalcontroller` package includes a Python-based controller that requires additional Python dependencies. It's recommended to use the system Python environment for simplicity.
+
+Install required Python packages:
+
+```bash
+pip3 install numpy onnxruntime
+```
+
+**Note:** If you prefer to use a virtual environment or conda, ensure that the ROS 2 workspace can access the Python packages in that environment. Using system Python is simpler and avoids environment activation issues when launching ROS 2 nodes.
 
 ## Subpackages
 
-- ```crl_ros_helper```: helper functions for ros integration
-- ```crl_fsm```: finite state machine implementation
-- ```crl_fsm_msgs```: message definitions for crl_fsm
-- ```crl_humanoid_msgs```: message definitions for crl_humanoid packages
-- ```crl_humanoid_commons```: common interfaces
+### Core Infrastructure
+- ```crl_ros_helper```: Helper functions for ROS integration
+- ```crl_fsm```: Finite state machine implementation
+- ```crl_fsm_msgs```: Message definitions for crl_fsm
+
+### Humanoid Common Packages
+- ```crl_humanoid_msgs```: Message definitions for crl_humanoid packages
+- ```crl_humanoid_commons```: Common interfaces and utilities
 - ```crl_humanoid_monitor```: GUI application for robot operations
-- ```crl_humanoid_simulator```: simulation tool for software-in-the-loop test
-- ```unitree_ros2```
-  - ```unitree_api```
-  - ```unitree_go```
+- ```crl_humanoid_simulator```: Simulation tool for software-in-the-loop testing
+- ```crl_humanoid_hardware```: Hardware interface for real robot communication
+
+### G1 Controller Packages
+- ```crl_g1_rlcontroller```: Reinforcement learning-based locomotion controller
+- ```crl_g1_mimiccontroller```: DeepMimic and DeepTrack controllers
+- ```crl_g1_goalcontroller```: Goal-directed controller with Python integration
 
 ## Build
 
-The folder structure is the typical ros 2 workspace layout:
+The folder structure is the typical ROS 2 workspace layout:
 
 ```
 src/
@@ -260,9 +231,12 @@ src/
 ├── crl_humanoid_commons/
 ├── crl_humanoid_monitor/
 ├── crl_humanoid_simulator/
-└── unitree_ros2/
-    ├── unitree_api/
-    └── unitree_go/
+├── crl_humanoid_hardware/
+├── crl_g1_rlcontroller/
+├── crl_g1_mimiccontroller/
+└── crl_g1_goalcontroller_py/
+    ├── crl_g1_goalcontroller/
+    └── crl_g1_goalcontroller_python/
 ```
 
 Start building the workspace with sourcing the ros2 environment:
@@ -281,11 +255,35 @@ colcon build --packages-select <package_name> --cmake-args "-DCMAKE_BUILD_TYPE=R
 ```
 
 When building is complete, you can source the local setup files to overlay the newly built packages:
+
 ```bash
 source install/setup.bash
 ```
 
-You may start running the simulator with
+## Running
+
+### Simulator
+
+You may start running the simulator with:
+
 ```bash
 ros2 launch crl_humanoid_simulator g1.py
+ros2 launch crl_g1_rlcontroller g1_sim.py
+ros2 launch crl_g1_rlcontroller g1_sim_v2.py
+ros2 launch crl_g1_mimiccontroller g1_sim_deepmimic.py
+ros2 launch crl_g1_mimiccontroller g1_sim_deeptrack.py
+ros2 launch crl_g1_goalcontroller g1_sim.py
 ```
+
+### Hardware
+
+For running on real G1 hardware:
+
+```bash
+ros2 launch crl_g1_rlcontroller g1.py
+ros2 launch crl_g1_rlcontroller g1_v2.py
+ros2 launch crl_g1_mimiccontroller g1_deepmimic.py
+ros2 launch crl_g1_mimiccontroller g1_deeptrack.py
+ros2 launch crl_g1_goalcontroller g1.py
+```
+
