@@ -224,19 +224,20 @@ The folder structure is the typical ROS 2 workspace layout:
 
 ```
 src/
-├── crl_ros_helper/
-├── crl_fsm/
-├── crl_fsm_msgs/
-├── crl_humanoid_msgs/
-├── crl_humanoid_commons/
-├── crl_humanoid_monitor/
-├── crl_humanoid_simulator/
-├── crl_humanoid_hardware/
-├── crl_g1_rlcontroller/
-├── crl_g1_mimiccontroller/
-└── crl_g1_goalcontroller_py/
-    ├── crl_g1_goalcontroller/
-    └── crl_g1_goalcontroller_python/
+└── crl-humanoid-ros/
+    ├── crl_ros_helper/
+    ├── crl_fsm/
+    ├── crl_fsm_msgs/
+    ├── crl_humanoid_msgs/
+    ├── crl_humanoid_commons/
+    ├── crl_humanoid_monitor/
+    ├── crl_humanoid_simulator/
+    ├── crl_humanoid_hardware/
+    ├── crl_g1_rlcontroller/
+    ├── crl_g1_mimiccontroller/
+    └── crl_g1_goalcontroller_py/
+        ├── crl_g1_goalcontroller/
+        └── crl_g1_goalcontroller_python/
 ```
 
 Start building the workspace with sourcing the ros2 environment:
