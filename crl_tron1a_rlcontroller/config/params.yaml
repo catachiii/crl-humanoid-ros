@@ -1,4 +1,5 @@
-robot_hw_node:
+/**:
+  walk:
   ros__parameters:
     ControllerCfg:
       joint_names_gym:
@@ -46,8 +47,8 @@ robot_hw_node:
 
       normalization:
         clip_scales:
-          clip_observations: 100.
-          clip_actions: 100.
+            clip_observations: 100.0
+            clip_actions: 100.0
         obs_scales:
           lin_vel: 2.0
           ang_vel: 0.25

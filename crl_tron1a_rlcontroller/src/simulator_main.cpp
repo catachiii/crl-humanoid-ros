@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     std::array<Machines, 1> monitoring = {Machines::ONBOARD};
 
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
-    std::shared_ptr<crl::humanoid::simulator::RobotSimNode<States, Machines, 1>> robotNode;
+    std::shared_ptr<crl::humanoid::commons::RobotNode<States, Machines, 1>> robotNode;
     if (modelName == "G1") {
         robotNode = std::make_shared<crl::humanoid::simulator::G1SimNode<States, Machines, 1>>(model, data, monitoring, machine.is_transitioning());
     } else if (modelName == "WF_TRON1A") {

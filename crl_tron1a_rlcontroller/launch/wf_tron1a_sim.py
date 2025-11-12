@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     monitor_config = os.path.join(
-        get_package_share_directory("crl_tron1a_rlcontroller"),
+        get_package_share_directory("crl_humanoid_monitor"),
         'config',
         'wf_tron1a_monitor.yaml'
     )
@@ -17,26 +17,23 @@ def generate_launch_description():
         'wf_tron1a_simulator.yaml'
     )
 
-    ctrl_params = os.path.join(
-        get_package_share_directory("crl_tron1a_rlcontroller"),
-        'config',
-        'params.yaml'
-    )
-
-
     return LaunchDescription([
         Node(
             package='crl_tron1a_rlcontroller',
             namespace='wf_tron1a_sim',
             executable='simulator_main',
-            parameters=[sim_config, ctrl_params],
+            parameters=[sim_config],
             arguments=['--model', 'wf_tron1a']
         ),
         Node(
-            package='crl_tron1a_rlcontroller',
+            package='crl_humanoid_monitor',
             namespace='wf_tron1a_sim',
-            executable='monitor_main',
-            parameters=[monitor_config],
+            executable='monitor',
+            parameters=[
+                monitor_config,
+                {'model': 'wf_tron1a',
+                'robot_xml_file': 'wf_tron1a_description/xml/scene_crl.xml'}
+            ],
             remappings=[
                 ('monitor_joystick', 'remote')
             ]

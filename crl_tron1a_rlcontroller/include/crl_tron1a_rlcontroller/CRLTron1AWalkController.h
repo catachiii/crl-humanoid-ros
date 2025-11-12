@@ -41,9 +41,9 @@ namespace crl::tron1a::rlcontroller {
 
         crl::dVector currentObs_;
         std::vector<crl::dVector> obsHistory_;
-        std::vector<float> observations_;
-        std::vector<float> proprioHistoryVector_;
-        Eigen::Matrix<float, Eigen::Dynamic, 1> proprioHistoryBuffer_;
+        std::vector<robot_controllers::tensor_element_t> observations_;
+        std::vector<robot_controllers::tensor_element_t> proprioHistoryVector_;
+        Eigen::Matrix<robot_controllers::tensor_element_t, Eigen::Dynamic, 1> proprioHistoryBuffer_;
         
         int numObs_;
         int numActions_;
@@ -102,9 +102,9 @@ namespace crl::tron1a::rlcontroller {
         std::unique_ptr<Ort::Session> encoderSessionPtr_{nullptr};  // Encoder session
         Ort::Value inputTensor_{nullptr};
         Ort::Value outputTensor_{nullptr};
-        std::vector<float> inputData_;
-        std::vector<float> outputData_;
-        std::vector<float> encoderOut_;
+        std::vector<robot_controllers::tensor_element_t> inputData_;
+        std::vector<robot_controllers::tensor_element_t> outputData_;
+        std::vector<robot_controllers::tensor_element_t> encoderOut_;
         std::array<int64_t, 2> inputShape_;
         std::array<int64_t, 2> outputShape_;
         std::vector<std::vector<int64_t>> encoderInputShapes_;

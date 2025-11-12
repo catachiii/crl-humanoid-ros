@@ -108,7 +108,7 @@ namespace crl::humanoid::simulator {
         }
 
     protected:
-        void resetRobot(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model) override {
+        void resetRobot(const std::shared_ptr<crl::humanoid::commons::RobotModel>& /* model */) override {
             std::lock_guard<std::mutex> lock(mujocoMutex_);
             if (mujocoData_ && mujocoModel_) {
                 mj_resetData(mujocoModel_, mujocoData_);
@@ -247,8 +247,7 @@ namespace crl::humanoid::simulator {
 
             // Safety check with sensor data, don't trigger emergency stop
             {
-                auto state = this->fsm_state_informer.get_first_state();
-                for (size_t i = 0; i < q.size() && i < this->jointCount_; ++i) {
+                for (size_t i = 0; i < q.size() && i < static_cast<size_t>(this->jointCount_); ++i) {
                     // Angle limit check
                     if (q[i] > this->jointPosMax_[i]) {
                         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current angle %f, breached max angle %f",

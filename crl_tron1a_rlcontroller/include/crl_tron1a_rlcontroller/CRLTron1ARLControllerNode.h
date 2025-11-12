@@ -24,20 +24,28 @@ namespace crl::tron1a::rlcontroller {
             // Optional params for direct ONNX model loading (Wheelfoot-style)
             // Required now: we do not support JSON fallback in this node
             if (!this->has_parameter("robot_controllers_policy_file")) {
-                this->declare_parameter<std::string>("robot_controllers_policy_file", "");
+                this->template declare_parameter<std::string>("robot_controllers_policy_file", "");
             }
             if (!this->has_parameter("robot_controllers_encoder_file")) {
-                this->declare_parameter<std::string>("robot_controllers_encoder_file", "");
+                this->template declare_parameter<std::string>("robot_controllers_encoder_file", "");
             }
 
             std::string policyPath;
+            std::string encoderPath;
             // Require param-based model loading
-            if (this->get_parameter("robot_controllers_policy_file", policyPath) && !policyPath.empty()) {
+            bool havePolicy = this->get_parameter("robot_controllers_policy_file", policyPath) && !policyPath.empty();
+            bool haveEncoder = this->get_parameter("robot_controllers_encoder_file", encoderPath) && !encoderPath.empty();
+            if (havePolicy && haveEncoder) {
                 if (!this->controller_->loadModelFromParams(*this)) {
-                    RCLCPP_FATAL(this->get_logger(), "Cannot load ONNX models from params (policy: %s)", policyPath.c_str());
+                    RCLCPP_FATAL(this->get_logger(), "Cannot load ONNX models from params (policy: %s, encoder: %s)", policyPath.c_str(), encoderPath.c_str());
                 }
             } else {
-                RCLCPP_FATAL(this->get_logger(), "Parameter 'robot_controllers_policy_file' is required for CRLTron1ARLControllerNode");
+                if (!havePolicy) {
+                    RCLCPP_FATAL(this->get_logger(), "Parameter 'robot_controllers_policy_file' is required for CRLTron1ARLControllerNode");
+                }
+                if (!haveEncoder) {
+                    RCLCPP_FATAL(this->get_logger(), "Parameter 'robot_controllers_encoder_file' is required for CRLTron1ARLControllerNode");
+                }
             }
         }
 

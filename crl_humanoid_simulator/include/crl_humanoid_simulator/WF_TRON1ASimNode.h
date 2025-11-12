@@ -55,6 +55,12 @@ namespace crl::humanoid::simulator {
             joystickMaxSidewaysVel_ = this->get_parameter("joystick_max_sideways_velocity").as_double();
             joystickMaxTurningVel_ = this->get_parameter("joystick_max_turning_velocity").as_double();
 
+            // Declare elastic band parameters
+            this->declare_parameter("elastic_band_enabled", true);
+            this->declare_parameter("elastic_band_stiffness", 500.0);
+            this->declare_parameter("elastic_band_damping", 100.0);
+            this->declare_parameter("elastic_band_target_height", 1.45);
+
             // Setup elastic band service
             elasticBandService_ = this->template create_service<crl_humanoid_msgs::srv::ElasticBand>(
                 "elastic_band",
@@ -63,6 +69,13 @@ namespace crl::humanoid::simulator {
 
             // Initialize MuJoCo
             initializeMuJoCo();
+            
+            // Read and apply elastic band parameters from config
+            bool elasticEnabled = this->get_parameter("elastic_band_enabled").as_bool();
+            double elasticStiffness = this->get_parameter("elastic_band_stiffness").as_double();
+            double elasticDamping = this->get_parameter("elastic_band_damping").as_double();
+            double elasticHeight = this->get_parameter("elastic_band_target_height").as_double();
+            setElasticBandSupport(elasticEnabled, elasticStiffness, elasticDamping, elasticHeight);
 
             // Setup joint mappings
             setupJointMappings();
@@ -108,7 +121,7 @@ namespace crl::humanoid::simulator {
         }
 
     protected:
-        void resetRobot(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model) override {
+        void resetRobot(const std::shared_ptr<crl::humanoid::commons::RobotModel>& /* model */) override {
             std::lock_guard<std::mutex> lock(mujocoMutex_);
             if (mujocoData_ && mujocoModel_) {
                 mj_resetData(mujocoModel_, mujocoData_);
@@ -247,8 +260,7 @@ namespace crl::humanoid::simulator {
 
             // Safety check with sensor data, don't trigger emergency stop
             {
-                auto state = this->fsm_state_informer.get_first_state();
-                for (size_t i = 0; i < q.size() && i < this->jointCount_; ++i) {
+                for (size_t i = 0; i < q.size() && i < static_cast<size_t>(this->jointCount_); ++i) {
                     // Angle limit check
                     if (q[i] > this->jointPosMax_[i]) {
                         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Joint %zu (%s), with current angle %f, breached max angle %f",
@@ -486,14 +498,24 @@ namespace crl::humanoid::simulator {
             std::shared_ptr<crl_humanoid_msgs::srv::ElasticBand::Response> response) {
 
             try {
-                setElasticBandSupport(request->enable, request->stiffness, request->damping, request->target_height);
+                // If target_height is -1.0, use current height
+                double targetHeight = request->target_height;
+                if (targetHeight < 0.0 && mujocoData_ && mujocoModel_) {
+                    int baseBodyId = mj_name2id(mujocoModel_, mjOBJ_BODY, "base_Link");
+                    if (baseBodyId >= 0) {
+                        targetHeight = mujocoData_->xpos[3*baseBodyId + 2]; // Z position
+                    } else {
+                        targetHeight = elasticBandTargetHeight_; // Fallback to current setting
+                    }
+                }
+                setElasticBandSupport(request->enable, request->stiffness, request->damping, targetHeight);
 
                 response->success = true;
                 if (request->enable) {
                     response->message = "Elastic band support enabled with stiffness=" +
                                       std::to_string(request->stiffness) + " N/m, damping=" +
                                       std::to_string(request->damping) + " Ns/m, target_height=" +
-                                      std::to_string(elasticBandTargetHeight_) + " m";
+                                      std::to_string(targetHeight) + " m";
                 } else {
                     response->message = "Elastic band support disabled";
                 }

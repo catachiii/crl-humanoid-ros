@@ -12,6 +12,10 @@
   <depend>crl_humanoid_commons</depend>
   <depend>crl_fsm</depend>
   <depend>crl_ros_helper</depend>
+  <build_depend>crl_humanoid_simulator</build_depend>
+  <exec_depend>crl_humanoid_simulator</exec_depend>
+  <build_depend>crl_g1_rlcontroller</build_depend>
+  <exec_depend>crl_g1_rlcontroller</exec_depend>
 
   <!-- If you link ONNX Runtime, add a find_package or vendor package and declare it here -->
   <!-- <depend>onnxruntime</depend> -->

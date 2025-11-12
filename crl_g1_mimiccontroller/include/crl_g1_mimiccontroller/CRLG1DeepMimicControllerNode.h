@@ -43,7 +43,7 @@ namespace crl::g1::mimiccontroller {
                 fsm_checked_switch_ = [client](States to){ return client->checked_broadcast_switch(to); };
                 fsm_unchecked_switch_ = [client](States to){
                     // Fire-and-forget: just send the request without waiting
-                    auto futures = client->broadcast_switch(to);
+                    (void)client->broadcast_switch(to);
                     // Futures will be automatically destroyed, requests are sent but we don't wait
                 };
             } catch (const std::exception& e) {
