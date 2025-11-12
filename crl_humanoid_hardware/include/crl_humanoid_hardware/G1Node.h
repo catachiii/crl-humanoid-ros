@@ -436,8 +436,9 @@ namespace crl::unitree::hardware::g1 {
 
         void updateDataWithSensorReadings() override {
             // Create sensor data structure for humanoid robot
-            crl::humanoid::commons::RobotSensor sensorInput;
-            crl::humanoid::commons::RobotState robotState;
+
+            auto sensorInput = this->data_->getSensor();
+            auto robotState = this->data_->getRobotState();
 
             // Thread-safe access to state
             unitree_hg::msg::dds_::LowState_ currentState;

@@ -4,6 +4,7 @@
 #include <crl_humanoid_commons/nodes/EstopNode.h>
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
+#include <crl_humanoid_commons/nodes/MocapNode.h>
 #include <crl_humanoid_commons/nodes/PyControllerNode.h>
 #include <crl_humanoid_hardware/G1Node.h>
 #include <crl_g1_rlcontroller/CRLG1RLControllerNode.h>
@@ -92,6 +93,7 @@ int main(int argc, char** argv) {
 
     // Create robot node (real hardware communication) - using G1Node
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
+    const auto mocapNode = std::make_shared<crl::humanoid::commons::MocapNode>(model, data);
     std::shared_ptr<crl::unitree::hardware::g1::G1Node<States, Machines, 1>> robotNode;
 
     if (modelName == "G1") {
@@ -118,6 +120,7 @@ int main(int argc, char** argv) {
     auto& executor = machine.get_executor();
     executor.add_node(robotNode);
     executor.add_node(commNode);
+    executor.add_node(mocapNode);
 
     // Start the FSM machine (this will handle the hardware communication loop)
     machine.spin();

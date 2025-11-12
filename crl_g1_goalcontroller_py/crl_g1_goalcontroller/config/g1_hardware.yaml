@@ -63,6 +63,11 @@
       monitorPublisherQueueSize: 10
       remoteSubscriberQueueSize: 10
 
+  mocap:
+    ros__parameters:
+      time_step_size: 0.001667  # will be used in python controller, so set to 600Hz
+      rigid_body_id: 2  # ID of the mocap rigid body to track
+
   robot:
     ros__parameters:
       time_step_size: 0.001667  # 600 hz

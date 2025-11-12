@@ -46,6 +46,14 @@ namespace crl::humanoid::commons {
         // imu often has its own mechanism to estimate orientation
         Quaternion imuOrientation = Quaternion::Identity();
 
+        // mocap pose from optitrack
+        struct MocapPose {
+            P3D position = P3D(0, 0, 0);
+            Quaternion orientation = Quaternion::Identity();
+            bool valid = false;  // indicates if mocap data is available
+        };
+        MocapPose mocapPose;
+
         struct RobotJointSensor {
             std::string jointName;
             double jointPos;     // rad

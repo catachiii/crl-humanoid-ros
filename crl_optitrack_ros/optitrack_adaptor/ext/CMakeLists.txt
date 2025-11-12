@@ -1,0 +1,7 @@
+if (WIN32)
+    add_subdirectory(NatNetSDK_windows)
+elseif(UNIX)
+    add_subdirectory(NatNetSDK_linux)
+else()
+    message(SEND_ERROR "No suitable NatNet Library")
+endif ()

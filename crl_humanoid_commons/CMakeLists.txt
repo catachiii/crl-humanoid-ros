@@ -32,6 +32,7 @@ find_package(std_srvs 0.1 REQUIRED)
 find_package(crl_humanoid_msgs 0.2 REQUIRED)
 find_package(crl_fsm 0.1 REQUIRED)
 find_package(crl_ros_helper 0.1 REQUIRED)
+find_package(optitrack_msgs REQUIRED)
 
 # -----------------------------------------------------------------------------
 # code
@@ -76,7 +77,7 @@ target_compile_definitions(
 )
 
 # add ros dependencies
-ament_target_dependencies(${CRL_TARGET_NAME} rclcpp std_srvs crl_humanoid_msgs crl_fsm crl_ros_helper)
+ament_target_dependencies(${CRL_TARGET_NAME} rclcpp std_srvs crl_humanoid_msgs crl_fsm crl_ros_helper optitrack_msgs)
 
 install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
@@ -106,7 +107,7 @@ endif()
 
 ament_export_targets(${CRL_TARGET_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
-        crl_humanoid_msgs rclcpp std_srvs crl_fsm crl_ros_helper         # ros packages
+        crl_humanoid_msgs rclcpp std_srvs crl_fsm crl_ros_helper optitrack_msgs         # ros packages
         Eigen3 nlohmann_json                      # crl-loco dependencies
 )
 

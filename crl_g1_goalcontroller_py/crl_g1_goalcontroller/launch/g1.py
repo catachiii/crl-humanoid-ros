@@ -36,7 +36,12 @@ def generate_launch_description():
         ),
         Node(
             package='crl_g1_goalcontroller_python',
-            namespace='g1_sim',
+            namespace='g1_hardware',
             executable='crl_goal_amp'
+        ),
+        Node(
+            package='optitrack_adaptor',
+            executable='adaptor_runner',
+            parameters=['/home/jicheng/humanoid_ws/src/crl-humanoid-ros/crl_optitrack_ros/optitrack_adaptor/config/crl_lab_optitrack.yaml']
         )
     ])

@@ -1,0 +1,16 @@
+optitrack_adaptor:
+  ros__parameters:
+    auto_find: true
+    connection_type: 1
+    server_command_port: 1510
+    server_data_port: 1511
+    server_address: "192.168.0.117"  # make sure the mocap PC is physically connected to the legged PC
+    local_address: "192.168.0.195"
+    multicast_address: "239.255.42.99"
+optitrack_dispatcher:
+  ros__parameters:
+    rigidbodies:
+      2:
+        publisher_name: "g1_torso"
+
+# ros2 run optitrack_adaptor adaptor_runner --ros-args --params-file <path_to_this_file>

@@ -13,11 +13,13 @@
   <build_depend>crl_humanoid_msgs</build_depend>
   <build_depend>crl_fsm</build_depend>
   <build_depend>crl_ros_helper</build_depend>
+  <build_depend>optitrack_msgs</build_depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
   <exec_depend>crl_humanoid_msgs</exec_depend>
   <exec_depend>crl_fsm</exec_depend>
   <exec_depend>crl_ros_helper</exec_depend>
+  <exec_depend>optitrack_msgs</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
