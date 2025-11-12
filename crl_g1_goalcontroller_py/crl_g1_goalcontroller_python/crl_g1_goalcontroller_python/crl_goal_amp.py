@@ -155,6 +155,8 @@ class goal_amp_controller(Node):
         self.raw_joint_vel = np.zeros(self.num_actions, dtype=np.float32)
         self.raw_command = np.zeros(self.num_commands, dtype=np.float32)
 
+        self.raw_state_quat_w = np.zeros(4, dtype=np.float32)
+
         # create buffers for processed data (updated by publisher)
         self.obs = np.zeros(self.num_obs, dtype=np.float32)
         self.obs_history = np.zeros(
@@ -169,6 +171,10 @@ class goal_amp_controller(Node):
         self.raw_root_quat_w[1] = msg.sensor.imu.orientation.x
         self.raw_root_quat_w[2] = msg.sensor.imu.orientation.y
         self.raw_root_quat_w[3] = msg.sensor.imu.orientation.z
+        self.raw_state_quat_w[0] = msg.state.base_pose.pose.orientation.w
+        self.raw_state_quat_w[1] = msg.state.base_pose.pose.orientation.x
+        self.raw_state_quat_w[2] = msg.state.base_pose.pose.orientation.y
+        self.raw_state_quat_w[3] = msg.state.base_pose.pose.orientation.z
         self.raw_root_ang_vel_b[0] = msg.sensor.imu.angular_velocity.x
         self.raw_root_ang_vel_b[1] = msg.sensor.imu.angular_velocity.y
         self.raw_root_ang_vel_b[2] = msg.sensor.imu.angular_velocity.z
@@ -190,10 +196,13 @@ class goal_amp_controller(Node):
         # Convert global target to local frame
         current_pos = self.raw_root_pos[:2]  # xy position
         _, _, current_yaw = euler_xyz_from_quat(
-            self.raw_root_quat_w)  # extract yaw
+            self.raw_state_quat_w)  # extract yaw
 
         target_pos = self.raw_command[:2]  # global target xy
         target_yaw = self.raw_command[2]  # global target yaw
+
+        # print in ros
+        # self.get_logger().info(f"Current Pos: {self.raw_root_pos}, Target Pos: {target_pos}, Current Yaw: {current_yaw}, Target Yaw: {target_yaw}")
 
         # Transform target position to local frame
         target_pos_b = np.zeros(2, dtype=np.float32)
@@ -208,6 +217,7 @@ class goal_amp_controller(Node):
         # Build commands in local frame
         commands = np.array(
             [target_pos_b[0], target_pos_b[1], target_yaw_b], dtype=np.float32)
+        # commands = np.array([0, 0, 0], dtype=np.float32)  # zero commands for testing
 
         self.obs = np.concatenate([
             pelvis_ang_vel_b,
