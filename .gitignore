@@ -18,3 +18,7 @@ cmake-build-*/
 
 # clang
 clang
+
+# Python
+*.pyc
+__pycache__/
