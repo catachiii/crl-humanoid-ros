@@ -60,6 +60,9 @@ namespace crl::humanoid::simulator {
             this->declare_parameter("elastic_band_stiffness", 500.0);
             this->declare_parameter("elastic_band_damping", 100.0);
             this->declare_parameter("elastic_band_target_height", 1.45);
+            
+            // Declare initial pose parameter (default: "upright" for original behavior, "limx_sitting" for LimX deployment pose)
+            this->declare_parameter("initial_pose_mode", "upright");
 
             // Setup elastic band service
             elasticBandService_ = this->template create_service<crl_humanoid_msgs::srv::ElasticBand>(
@@ -199,44 +202,79 @@ namespace crl::humanoid::simulator {
             crl::V3D gyro = crl::V3D(0, 0, 0);
             crl::Quaternion imuQuat = crl::Quaternion::Identity();
 
-            // Get IMU orientation from the pelvis IMU site
-            int imuSiteId = mj_name2id(mujocoModel_, mjOBJ_SITE, "imu");
-            if (imuSiteId >= 0) {
-                // Get IMU site orientation from rotation matrix and convert to quaternion
-                // site_xmat is a 3x3 rotation matrix stored in column-major order (9 consecutive values)
-                crl::Matrix3x3 rotMat;
-                // MuJoCo stores rotation matrix in column-major order: [col0, col1, col2]
-                rotMat << mujocoData_->site_xmat[9*imuSiteId], mujocoData_->site_xmat[9*imuSiteId+1], mujocoData_->site_xmat[9*imuSiteId+2],
-                         mujocoData_->site_xmat[9*imuSiteId+3], mujocoData_->site_xmat[9*imuSiteId+4], mujocoData_->site_xmat[9*imuSiteId+5],
-                         mujocoData_->site_xmat[9*imuSiteId+6], mujocoData_->site_xmat[9*imuSiteId+7], mujocoData_->site_xmat[9*imuSiteId+8];
-                imuQuat = crl::Quaternion(rotMat);
-            } else {
-                // Fallback to pelvis body orientation if IMU site not found
-                int baseBodyId = mj_name2id(mujocoModel_, mjOBJ_BODY, "base_Link");
-                if (baseBodyId >= 0) {
-                    imuQuat = crl::Quaternion(mujocoData_->xquat[4*baseBodyId],
-                                            mujocoData_->xquat[4*baseBodyId+1],
-                                            mujocoData_->xquat[4*baseBodyId+2],
-                                            mujocoData_->xquat[4*baseBodyId+3]);
-                }
-            }
-
             // Get sensor data by name using MuJoCo API
+            // mj_name2id returns the sensor ID (index in sensor array), which we use with sensor_adr
+            int quatId = mj_name2id(mujocoModel_, mjOBJ_SENSOR, "quat");
             int gyroId = mj_name2id(mujocoModel_, mjOBJ_SENSOR, "gyro");
             int accelId = mj_name2id(mujocoModel_, mjOBJ_SENSOR, "acc");
 
-            if (gyroId >= 0) {
-                // Gyroscope: get from MuJoCo pelvis sensor (already in body frame)
-                gyro = crl::V3D(mujocoData_->sensordata[3*gyroId],
-                               mujocoData_->sensordata[3*gyroId+1],
-                               mujocoData_->sensordata[3*gyroId+2]);
+            // Get IMU orientation from framequat sensor (reads quaternion from imu site)
+            if (quatId >= 0 && quatId < mujocoModel_->nsensor) {
+                // framequat sensor outputs 4 values: [w, x, y, z]
+                // sensor_adr[quatId] gives the starting index in sensordata array
+                int quatAdr = mujocoModel_->sensor_adr[quatId];
+                if (quatAdr + 3 < mujocoModel_->nsensordata) {
+                    imuQuat = crl::Quaternion(mujocoData_->sensordata[quatAdr],      // w
+                                             mujocoData_->sensordata[quatAdr+1],    // x
+                                             mujocoData_->sensordata[quatAdr+2],    // y
+                                             mujocoData_->sensordata[quatAdr+3]);   // z
+                } else {
+                    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                       "Quaternion sensor address out of bounds: quatAdr=%d, nsensordata=%d",
+                                       quatAdr, mujocoModel_->nsensordata);
+                }
+            } else {
+                // Fallback: get IMU orientation from the pelvis IMU site rotation matrix
+                int imuSiteId = mj_name2id(mujocoModel_, mjOBJ_SITE, "imu");
+                if (imuSiteId >= 0) {
+                    // Get IMU site orientation from rotation matrix and convert to quaternion
+                    // site_xmat is a 3x3 rotation matrix stored in column-major order (9 consecutive values)
+                    crl::Matrix3x3 rotMat;
+                    // MuJoCo stores rotation matrix in column-major order: [col0, col1, col2]
+                    rotMat << mujocoData_->site_xmat[9*imuSiteId], mujocoData_->site_xmat[9*imuSiteId+1], mujocoData_->site_xmat[9*imuSiteId+2],
+                             mujocoData_->site_xmat[9*imuSiteId+3], mujocoData_->site_xmat[9*imuSiteId+4], mujocoData_->site_xmat[9*imuSiteId+5],
+                             mujocoData_->site_xmat[9*imuSiteId+6], mujocoData_->site_xmat[9*imuSiteId+7], mujocoData_->site_xmat[9*imuSiteId+8];
+                    imuQuat = crl::Quaternion(rotMat);
+                } else {
+                    // Final fallback: use base body orientation if IMU site not found
+                    int baseBodyId = mj_name2id(mujocoModel_, mjOBJ_BODY, "base_Link");
+                    if (baseBodyId >= 0) {
+                        imuQuat = crl::Quaternion(mujocoData_->xquat[4*baseBodyId],
+                                                mujocoData_->xquat[4*baseBodyId+1],
+                                                mujocoData_->xquat[4*baseBodyId+2],
+                                                mujocoData_->xquat[4*baseBodyId+3]);
+                    }
+                }
             }
 
-            if (accelId >= 0) {
+            if (gyroId >= 0 && gyroId < mujocoModel_->nsensor) {
+                // Gyroscope: get from MuJoCo pelvis sensor (already in body frame)
+                // sensor_adr[gyroId] gives the starting index in sensordata array
+                int gyroAdr = mujocoModel_->sensor_adr[gyroId];
+                if (gyroAdr + 2 < mujocoModel_->nsensordata) {
+                    gyro = crl::V3D(mujocoData_->sensordata[gyroAdr],
+                                   mujocoData_->sensordata[gyroAdr+1],
+                                   mujocoData_->sensordata[gyroAdr+2]);
+                } else {
+                    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                       "Gyro sensor address out of bounds: gyroAdr=%d, nsensordata=%d",
+                                       gyroAdr, mujocoModel_->nsensordata);
+                }
+            }
+
+            if (accelId >= 0 && accelId < mujocoModel_->nsensor) {
                 // Accelerometer: get from MuJoCo pelvis sensor (already in body frame)
-                accelerometer = crl::V3D(mujocoData_->sensordata[3*accelId],
-                                        mujocoData_->sensordata[3*accelId+1],
-                                        mujocoData_->sensordata[3*accelId+2]);
+                // sensor_adr[accelId] gives the starting index in sensordata array
+                int accelAdr = mujocoModel_->sensor_adr[accelId];
+                if (accelAdr + 2 < mujocoModel_->nsensordata) {
+                    accelerometer = crl::V3D(mujocoData_->sensordata[accelAdr],
+                                            mujocoData_->sensordata[accelAdr+1],
+                                            mujocoData_->sensordata[accelAdr+2]);
+                } else {
+                    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                       "Accelerometer sensor address out of bounds: accelAdr=%d, nsensordata=%d",
+                                       accelAdr, mujocoModel_->nsensordata);
+                }
             }
 
             // Get joint encoder measurements
@@ -532,33 +570,81 @@ namespace crl::humanoid::simulator {
         void setDefaultPose() {
             if (!mujocoData_ || !mujocoModel_) return;
 
-            // Set base position and orientation
-            mujocoData_->qpos[0] = 0.0; // x position
-            mujocoData_->qpos[1] = 0.0; // y position
-            mujocoData_->qpos[2] = 0.92; // z position (height)
-            mujocoData_->qpos[3] = 1.0; // w (quaternion)
-            mujocoData_->qpos[4] = 0.0; // x (quaternion)
-            mujocoData_->qpos[5] = 0.0; // y (quaternion)
-            mujocoData_->qpos[6] = 0.0; // z (quaternion)
+            // Get initial pose mode parameter (default: "upright")
+            std::string poseMode = this->get_parameter("initial_pose_mode").as_string();
+            
+            // Joint order: abad_L, hip_L, knee_L, wheel_L, abad_R, hip_R, knee_R, wheel_R
+            std::vector<std::string> mujocoJointOrder = {
+                "abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "wheel_L_Joint",
+                "abad_R_Joint", "hip_R_Joint", "knee_R_Joint", "wheel_R_Joint"
+            };
+            
+            if (poseMode == "limx_sitting") {
+                // LimX deployment pose: sitting with 90° forward tilt
+                // Set base position and orientation
+                mujocoData_->qpos[0] = 0.0; // x position
+                mujocoData_->qpos[1] = 0.0; // y position
+                mujocoData_->qpos[2] = 0.6; // z position (lower height for lying down pose)
+                
+                // Orientation: 90 degrees forward tilt (pitch rotation around y-axis)
+                // Quaternion for 90° pitch forward: w=cos(π/4), x=0, y=sin(π/4), z=0
+                const double sqrt2_inv = 0.7071067811865476; // 1/sqrt(2) = cos(π/4) = sin(π/4)
+                mujocoData_->qpos[3] = sqrt2_inv; // w (quaternion)
+                mujocoData_->qpos[4] = 0.0;       // x (quaternion)
+                mujocoData_->qpos[5] = sqrt2_inv; // y (quaternion) - pitch rotation
+                mujocoData_->qpos[6] = 0.0;       // z (quaternion)
 
-            // Set ALL joint positions to zero (default standing pose)
-            // This should override any default configuration that might not be zeros
-            for (size_t canonicalIdx = 0; canonicalIdx < jointNames_.size(); ++canonicalIdx) {
-                if (canonicalIdx < dataToMujocoMapping_.size()) {
-                    size_t mujocoIdx = dataToMujocoMapping_[canonicalIdx];
-                    if (mujocoIdx != SIZE_MAX) {
-                        // Find the joint ID and set its position to zero
-                        std::vector<std::string> mujocoJointOrder = {
-                            "abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "wheel_L_Joint",
-                            "abad_R_Joint", "hip_R_Joint", "knee_R_Joint", "wheel_R_Joint"
-                        };
+                // Initial sitting pose joint angles (matching LimX deployment spawn pose)
+                // Joint order: abad_L, hip_L, knee_L, wheel_L, abad_R, hip_R, knee_R, wheel_R
+                std::vector<double> initialJointAngles = {
+                    0.1541,   // abad_L_Joint
+                    -1.0124,  // hip_L_Joint
+                    1.3613,   // knee_L_Joint
+                    0.0,      // wheel_L_Joint
+                    -0.1541,  // abad_R_Joint (opposite sign)
+                    1.0124,   // hip_R_Joint (opposite sign)
+                    -1.3613,  // knee_R_Joint (opposite sign)
+                    0.0       // wheel_R_Joint
+                };
 
-                        if (mujocoIdx < mujocoJointOrder.size()) {
+                for (size_t canonicalIdx = 0; canonicalIdx < jointNames_.size(); ++canonicalIdx) {
+                    if (canonicalIdx < dataToMujocoMapping_.size()) {
+                        size_t mujocoIdx = dataToMujocoMapping_[canonicalIdx];
+                        if (mujocoIdx != SIZE_MAX && mujocoIdx < mujocoJointOrder.size() && mujocoIdx < initialJointAngles.size()) {
                             int jointId = getJointId(mujocoJointOrder[mujocoIdx]);
                             if (jointId >= 0) {
                                 int qposIndex = mujocoModel_->jnt_qposadr[jointId];
                                 if (qposIndex >= 0 && qposIndex < mujocoModel_->nq) {
-                                    // Force all joints to zero position for symmetric standing
+                                    // Set joint to initial sitting pose angle
+                                    mujocoData_->qpos[qposIndex] = initialJointAngles[mujocoIdx];
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Default upright pose (original behavior)
+                // Set base position and orientation
+                mujocoData_->qpos[0] = 0.0; // x position
+                mujocoData_->qpos[1] = 0.0; // y position
+                mujocoData_->qpos[2] = 0.92; // z position (standing height)
+                
+                // Orientation: upright (no rotation)
+                mujocoData_->qpos[3] = 1.0; // w (quaternion) - no rotation
+                mujocoData_->qpos[4] = 0.0; // x (quaternion)
+                mujocoData_->qpos[5] = 0.0; // y (quaternion)
+                mujocoData_->qpos[6] = 0.0; // z (quaternion)
+
+                // Set all joint positions to zero (default standing pose)
+                for (size_t canonicalIdx = 0; canonicalIdx < jointNames_.size(); ++canonicalIdx) {
+                    if (canonicalIdx < dataToMujocoMapping_.size()) {
+                        size_t mujocoIdx = dataToMujocoMapping_[canonicalIdx];
+                        if (mujocoIdx != SIZE_MAX && mujocoIdx < mujocoJointOrder.size()) {
+                            int jointId = getJointId(mujocoJointOrder[mujocoIdx]);
+                            if (jointId >= 0) {
+                                int qposIndex = mujocoModel_->jnt_qposadr[jointId];
+                                if (qposIndex >= 0 && qposIndex < mujocoModel_->nq) {
+                                    // Set joint to zero (standing pose)
                                     mujocoData_->qpos[qposIndex] = 0.0;
                                 }
                             }

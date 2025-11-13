@@ -26,6 +26,7 @@ include_directories(include)
 add_executable(simulator_main 
     src/simulator_main.cpp
     src/CRLTron1AWalkController.cpp
+    src/LimXStandNode.cpp
 )
 ament_target_dependencies(simulator_main 
     rclcpp 

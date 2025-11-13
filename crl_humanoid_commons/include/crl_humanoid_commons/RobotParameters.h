@@ -191,8 +191,8 @@ namespace crl::humanoid::commons {
                             },
                             {
                                 // defaultJointConf (provided by you)
-                                0.0, 0.0, 0.0, 0.0, 0.0,
-                                0.0, 0.0, 0.0, 0.0, 0.0
+                                0.0, 0.0, 0.0, 0.0,
+                                0.0, 0.0, 0.0, 0.0
                             },
                             {
                                 // jointPosMax (upper limits from URDF)

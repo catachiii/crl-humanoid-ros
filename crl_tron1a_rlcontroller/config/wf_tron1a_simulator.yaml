@@ -7,6 +7,8 @@
     ros__parameters:
       time_step_size: 0.02
       duration: 1.0
+      loop_frequency: 500.0  # Control loop frequency for stand-up interpolation
+
 
   walk:
     ros__parameters:
