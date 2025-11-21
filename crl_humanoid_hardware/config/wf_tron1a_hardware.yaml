@@ -23,7 +23,7 @@
   robot:
     ros__parameters:
       time_step_size: 0.002  # 500 hz
-      network_interface: "enx00133bfd284e"
+      robot_ip_address: "127.0.0.1"  # For simulation use "127.0.0.1", for real robot use "10.192.1.2" or robot's IP
 
       joystick_max_forward_velocity: 4.0   # Maximum forward walking speed
       joystick_max_backward_velocity: 4.0  # Maximum backward walking speed
@@ -40,8 +40,8 @@
       # Currently available states: ESTOP, STAND, WALK
       # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
       state_keybindings:
-        states: ["ESTOP", "STAND", "WALK"]  # State names (must match enum in main.cpp)
-        keys:   ["B",     "A",     "X"]     # Corresponding keys for each state
+        states: ["ESTOP", "SIT", "STAND", "WALK"]  # State names (must match enum in main.cpp)
+        keys:   ["B",     "A",     "X" , "Y"]     # Corresponding keys for each state
 
       # Usage: Hold [modifier] + [state_key] to trigger state transition
       # Examples:

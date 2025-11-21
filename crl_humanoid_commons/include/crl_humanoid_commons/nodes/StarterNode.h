@@ -14,7 +14,7 @@ namespace crl::humanoid::commons {
          */
         class StarterNode : public BaseNode {
             public:
-            enum class TargetMode { ZERO = 0, STAND = 1, CROUCH = 2 };
+            enum class TargetMode { ZERO = 0, STAND = 1, CROUCH = 2, SIT = 3 };
 
             public:
             StarterNode(const StarterNode::TargetMode target,

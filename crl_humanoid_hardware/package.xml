@@ -15,6 +15,7 @@
   <depend>crl_humanoid_commons</depend>
   <depend>crl_fsm</depend>
   <depend>crl_fsm_msgs</depend>
+  <depend>limxsdk_lowlevel</depend>
 
   <build_depend>cmake</build_depend>
   <build_depend>libeigen3-dev</build_depend>

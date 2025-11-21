@@ -21,6 +21,7 @@ find_package(crl_humanoid_commons REQUIRED)
 find_package(crl_fsm REQUIRED)
 find_package(crl_fsm_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(limxsdk_lowlevel REQUIRED)
 
 # Build unitree_sdk2 as a subdirectory
 add_subdirectory(ext/unitree_sdk2)
@@ -43,8 +44,8 @@ target_include_directories(${PROJECT_NAME} INTERFACE
     $<INSTALL_INTERFACE:include/ddscxx>
 )
 
-# Link unitree_sdk2 to this package's interface
-target_link_libraries(${PROJECT_NAME} INTERFACE unitree_sdk2 ddsc ddscxx)
+# Link SDK libraries to this package's interface
+target_link_libraries(${PROJECT_NAME} INTERFACE unitree_sdk2 ddsc ddscxx ${limxsdk_lowlevel_LIBRARIES})
 
 # Add ROS dependencies to the interface library
 ament_target_dependencies(${PROJECT_NAME} INTERFACE
@@ -55,6 +56,7 @@ ament_target_dependencies(${PROJECT_NAME} INTERFACE
     crl_fsm
     crl_fsm_msgs
     Eigen3
+    limxsdk_lowlevel
 )
 
 # -----------------------------------------------------------------------------
@@ -132,5 +134,5 @@ ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_include_directories(include include/ddscxx)
 
 # Export dependencies for other packages that might depend on this one
-ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs Eigen3 unitree_sdk2)
+ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs Eigen3 unitree_sdk2 limxsdk_lowlevel)
 ament_package()

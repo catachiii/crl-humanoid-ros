@@ -13,7 +13,7 @@
 #include <cxxopts.hpp>
 
 
-crl_fsm_states(States, ESTOP, STAND, WALK);
+crl_fsm_states(States, ESTOP, SIT, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char** argv) {
@@ -32,11 +32,13 @@ int main(int argc, char** argv) {
     }
 
     // transitions
-    crl::fsm::Transition<States::ESTOP, States::STAND> t1;
-    crl::fsm::Transition<States::STAND, States::ESTOP> t2;
-    crl::fsm::Transition<States::STAND, States::WALK> t3;
-    crl::fsm::Transition<States::WALK, States::ESTOP> t4;
-    crl::fsm::Transition<States::WALK, States::STAND> t5;
+    crl::fsm::Transition<States::ESTOP, States::SIT> t1;
+    crl::fsm::Transition<States::SIT, States::STAND> t2;
+    crl::fsm::Transition<States::SIT, States::ESTOP> t3;    
+    crl::fsm::Transition<States::STAND, States::ESTOP> t4;
+    crl::fsm::Transition<States::STAND, States::WALK> t5;
+    crl::fsm::Transition<States::WALK, States::ESTOP> t6;
+    crl::fsm::Transition<States::WALK, States::SIT> t7;
 
     // data
     const auto model = std::make_shared<crl::humanoid::commons::RobotModel>(crl::humanoid::commons::robotModels.at(modelName));
@@ -45,13 +47,15 @@ int main(int argc, char** argv) {
     // machines
     auto m1 =
         crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::ESTOP>([&]() { return std::make_shared<crl::humanoid::commons::EstopNode>(model, data); });
-    auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
-        [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
-    auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
+    auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::SIT>(
+        [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::SIT, model, data, "sit"); });
+    auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
+        [&]() { return std::make_shared<crl::tron1a::rlcontroller::CRLTron1ARLControllerNode<crl::tron1a::rlcontroller::CRLTron1AWalkController>>(model, data, "stand"); });
+    auto m4 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
         [&]() { return std::make_shared<crl::tron1a::rlcontroller::CRLTron1ARLControllerNode<crl::tron1a::rlcontroller::CRLTron1AWalkController>>(model, data, "walk"); });
 
-    auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3);
-    constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);
+    auto s_cols = crl::fsm::make_states_collection_for_machine<Machines::ONBOARD, States>(m1, m2, m3, m4);
+    constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5, t6, t7);
 
     // init ros process
     rclcpp::init(argc, argv);

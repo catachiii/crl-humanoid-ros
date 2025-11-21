@@ -9,81 +9,20 @@
 #include <thread>
 #include <chrono>
 #include <unordered_map>
+#include <map>
+#include <cstdint>
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
 
-// unitree_sdk2
-#include <unitree/robot/channel/channel_publisher.hpp>
-#include <unitree/robot/channel/channel_subscriber.hpp>
-#include <unitree/idl/hg/LowCmd_.hpp>
-#include <unitree/idl/hg/LowState_.hpp>
-#include <unitree/common/thread/thread.hpp>
+// limx_sdk
+#include <limxsdk/wheellegged.h>
+#include <limxsdk/datatypes.h>
 
 namespace crl::unitree::hardware::wf_tron1a {
 
     // Number of motors in WF_TRON1A
     const int WF_TRON1A_NUM_MOTOR = 8;
-
-    // DDS topic names
-    static const std::string HG_CMD_TOPIC = "rt/lowcmd";
-    static const std::string HG_STATE_TOPIC = "rt/lowstate";
-
-    // Gamepad data structures (from SDK examples)
-    typedef union {
-        struct {
-            uint8_t R1 : 1;
-            uint8_t L1 : 1;
-            uint8_t start : 1;
-            uint8_t select : 1;
-            uint8_t R2 : 1;
-            uint8_t L2 : 1;
-            uint8_t F1 : 1;
-            uint8_t F2 : 1;
-            uint8_t A : 1;
-            uint8_t B : 1;
-            uint8_t X : 1;
-            uint8_t Y : 1;
-            uint8_t up : 1;
-            uint8_t right : 1;
-            uint8_t down : 1;
-            uint8_t left : 1;
-        } components;
-        uint16_t value;
-    } xKeySwitchUnion;
-
-    typedef struct {
-        uint8_t head[2];
-        xKeySwitchUnion btn;
-        float lx;
-        float rx;
-        float ry;
-        float L2;
-        float ly;
-        uint8_t idle[16];
-    } xRockerBtnDataStruct;
-
-    // CRC calculation function
-    inline uint32_t Crc32Core(uint32_t *ptr, uint32_t len) {
-        uint32_t xbit = 0;
-        uint32_t data = 0;
-        uint32_t CRC32 = 0xFFFFFFFF;
-        const uint32_t dwPolynomial = 0x04c11db7;
-        for (uint32_t i = 0; i < len; i++) {
-            xbit = 1 << 31;
-            data = ptr[i];
-            for (uint32_t bits = 0; bits < 32; bits++) {
-                if (CRC32 & 0x80000000) {
-                    CRC32 <<= 1;
-                    CRC32 ^= dwPolynomial;
-                } else
-                    CRC32 <<= 1;
-                if (data & xbit) CRC32 ^= dwPolynomial;
-                xbit >>= 1;
-            }
-        }
-        return CRC32;
-    }
 
     // Simple joystick data structure to maintain compatibility
     struct JoyData {
@@ -125,7 +64,7 @@ namespace crl::unitree::hardware::wf_tron1a {
                const StateNameToEnumMap& stateNameMap = {})
             : BaseRobotNode(model, data, monitoring, is_transitioning),
               isSDKInitialized_(false),
-              mode_machine_(0),
+              wheellegged_(nullptr),
               stateNameToEnumMap_(stateNameMap) {
 
             // Initialize default state mappings if none provided
@@ -133,9 +72,9 @@ namespace crl::unitree::hardware::wf_tron1a {
                 initializeDefaultStateMappings();
             }
 
-            // Declare and get network interface parameter
-            this->declare_parameter("network_interface", "eth0");
-            networkInterface_ = this->get_parameter("network_interface").as_string();
+            // Declare and get robot IP address parameter
+            this->declare_parameter("robot_ip_address", "127.0.0.1");  // Default: localhost for simulation
+            robotIpAddress_ = this->get_parameter("robot_ip_address").as_string();
 
             // Declare joystick velocity parameters
             this->declare_parameter("joystick_max_forward_velocity", 1.0);
@@ -168,10 +107,7 @@ namespace crl::unitree::hardware::wf_tron1a {
             // Initialize SDK
             initializeSDK();
 
-            // Initialize low command
-            InitLowCmd();
-
-            // Setup publishers and subscribers
+            // Setup publishers and subscribers (initializes command structure)
             setupCommunication();
         }
 
@@ -283,86 +219,95 @@ namespace crl::unitree::hardware::wf_tron1a {
 
             RCLCPP_INFO(this->get_logger(), "Using default keybindings: ESTOP=B, STAND=A, WALK=X");
         }
-
+        
         void initializeSDK() {
             try {
-                ::unitree::robot::ChannelFactory::Instance()->Init(0, networkInterface_);
-                isSDKInitialized_ = true;
-                RCLCPP_INFO(this->get_logger(), "Unitree SDK initialized successfully on interface: %s", networkInterface_.c_str());
+                wheellegged_ = limxsdk::Wheellegged::getInstance();
+                isSDKInitialized_ = wheellegged_->init(robotIpAddress_);
+                if (isSDKInitialized_) {
+                    RCLCPP_INFO(this->get_logger(), "LIMX SDK initialized successfully with IP: %s", robotIpAddress_.c_str());
+                } else {
+                    RCLCPP_ERROR(this->get_logger(), "LIMX SDK initialization failed with IP: %s", robotIpAddress_.c_str());
+                    throw std::runtime_error("Failed to initialize LIMX SDK");
+                }
             } catch (const std::exception& e) {
-                RCLCPP_ERROR(this->get_logger(), "Failed to initialize Unitree SDK: %s", e.what());
+                RCLCPP_ERROR(this->get_logger(), "Failed to initialize LIMX SDK: %s", e.what());
                 throw;
             }
         }
+
+        // void setupCommunication() {
+        //     try {
+        //         // Create SDK publisher for low commands
+        //         lowCommandPublisher_.reset(new ::unitree::robot::ChannelPublisher<unitree_hg::msg::dds_::LowCmd_>(HG_CMD_TOPIC));
+        //         lowCommandPublisher_->InitChannel();
+
+        //         // Create SDK subscriber for low state
+        //         lowStateSubscriber_.reset(new ::unitree::robot::ChannelSubscriber<unitree_hg::msg::dds_::LowState_>(HG_STATE_TOPIC));
+        //         lowStateSubscriber_->InitChannel(
+        //             std::bind(&Tron1aNode::LowStateHandler, this, std::placeholders::_1), 1);
+
+        //         RCLCPP_INFO(this->get_logger(), "SDK communication channels established");
+        //     } catch (const std::exception& e) {
+        //         RCLCPP_ERROR(this->get_logger(), "Failed to setup communication: %s", e.what());
+        //         throw;
+        //     }
+        // }
 
         void setupCommunication() {
-            try {
-                // Create SDK publisher for low commands
-                lowCommandPublisher_.reset(new ::unitree::robot::ChannelPublisher<unitree_hg::msg::dds_::LowCmd_>(HG_CMD_TOPIC));
-                lowCommandPublisher_->InitChannel();
-
-                // Create SDK subscriber for low state
-                lowStateSubscriber_.reset(new ::unitree::robot::ChannelSubscriber<unitree_hg::msg::dds_::LowState_>(HG_STATE_TOPIC));
-                lowStateSubscriber_->InitChannel(
-                    std::bind(&Tron1aNode::LowStateHandler, this, std::placeholders::_1), 1);
-
-                RCLCPP_INFO(this->get_logger(), "SDK communication channels established");
-            } catch (const std::exception& e) {
-                RCLCPP_ERROR(this->get_logger(), "Failed to setup communication: %s", e.what());
-                throw;
-            }
+            // Subscribe to robot state
+            wheellegged_->subscribeRobotState(
+                std::bind(&Tron1aNode::RobotStateHandler, this, std::placeholders::_1));
+            
+            // Subscribe to IMU data
+            wheellegged_->subscribeImuData(
+                std::bind(&Tron1aNode::ImuDataHandler, this, std::placeholders::_1));
+            
+            // Subscribe to joystick
+            wheellegged_->subscribeSensorJoy(
+                std::bind(&Tron1aNode::SensorJoyHandler, this, std::placeholders::_1));
+            
+            // Initialize command structure
+            robot_cmd_ = limxsdk::RobotCmd(wheellegged_->getMotorNumber());
         }
 
-        void LowStateHandler(const void* message) {
-            unitree_hg::msg::dds_::LowState_ low_state = *(const unitree_hg::msg::dds_::LowState_*)message;
-
-            // Verify CRC
-            if (low_state.crc() != Crc32Core((uint32_t*)&low_state,
-                                           (sizeof(unitree_hg::msg::dds_::LowState_) >> 2) - 1)) {
-                RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Low state CRC error");
-                return;
-            }
-
-            // Update mode machine and log if it changes (similar to G1 example)
-            if (mode_machine_ != low_state.mode_machine()) {
-                if (mode_machine_ == 0) {
-                    RCLCPP_INFO(this->get_logger(), "G1 type: %u", static_cast<unsigned>(low_state.mode_machine()));
-                } else {
-                    RCLCPP_INFO(this->get_logger(), "Mode machine changed from %u to %u",
-                               static_cast<unsigned>(mode_machine_), static_cast<unsigned>(low_state.mode_machine()));
-                }
-                mode_machine_ = low_state.mode_machine();
-            }
-
-            // Update state
-            {
-                std::lock_guard<std::mutex> lock(stateMutex_);
-                state_ = low_state;
-            }
-
-            // Extract wireless controller data
-            extractWirelessController();
+        void RobotStateHandler(const limxsdk::RobotStateConstPtr &msg) {
+            std::lock_guard<std::mutex> lock(stateMutex_);
+            robot_state_ = *msg;
+        }
+        
+        void ImuDataHandler(const limxsdk::ImuDataConstPtr &msg) {
+            std::lock_guard<std::mutex> lock(imuMutex_);
+            imu_data_ = *msg;
+        }
+        
+        void SensorJoyHandler(const limxsdk::SensorJoyConstPtr &msg) {
+            std::lock_guard<std::mutex> lock(joyMutex_);
+            sensor_joy_ = *msg;
+            extractWirelessController(); // Extract from sensor_joy_ instead
         }
 
         void extractWirelessController() {
-            std::lock_guard<std::mutex> lock(joyMutex_);
-
-            // Extract gamepad data from state_.wireless_remote_ array
-            if (state_.wireless_remote().size() >= sizeof(xRockerBtnDataStruct)) {
-                const xRockerBtnDataStruct* gamepad =
-                    reinterpret_cast<const xRockerBtnDataStruct*>(state_.wireless_remote().data());
-
-                // Convert to our joy_ format
-                joy_.lx = gamepad->lx;
-                joy_.ly = gamepad->ly;
-                joy_.rx = gamepad->rx;
-                joy_.ry = gamepad->ry;
-                joy_.keys = gamepad->btn.value;
+            // Extract gamepad data from LimX SDK SensorJoy structure
+            // LimX SDK joystick axes order: typically [lx, ly, rx, ry, ...]
+            // Buttons are in a vector<int32_t>
+            if (sensor_joy_.axes.size() >= 4) {
+                joy_.lx = sensor_joy_.axes[0];
+                joy_.ly = sensor_joy_.axes[1];
+                joy_.rx = sensor_joy_.axes[2];
+                joy_.ry = sensor_joy_.axes[3];
+            }
+            
+            // Convert button vector to bitmask
+            joy_.keys = 0;
+            for (size_t i = 0; i < sensor_joy_.buttons.size() && i < 16; ++i) {
+                if (sensor_joy_.buttons[i] != 0) {
+                    joy_.keys |= (1 << i);
+                }
             }
         }
         void setupJointMappings() {
             CanonicalJointNames_.clear();
-            HardwareJointNames_.clear();
             hardwareToDataMapping_.clear();
             dataToHardwareMapping_.clear();
 
@@ -373,63 +318,54 @@ namespace crl::unitree::hardware::wf_tron1a {
                 CanonicalJointNames_.push_back(jointControl.name);
             }
 
-            // Hardware joint order (as defined by the G1 robot hardware)
-            HardwareJointNames_ = {"left_hip_pitch_joint",     "left_hip_roll_joint",     "left_hip_yaw_joint",         "left_knee_joint",
-                                   "left_ankle_pitch_joint",   "left_ankle_roll_joint",   "right_hip_pitch_joint",      "right_hip_roll_joint",
-                                   "right_hip_yaw_joint",      "right_knee_joint",        "right_ankle_pitch_joint",    "right_ankle_roll_joint",
-                                   "waist_yaw_joint",          "waist_roll_joint",        "waist_pitch_joint",          "left_shoulder_pitch_joint",
-                                   "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_joint",           "left_wrist_roll_joint",
-                                   "left_wrist_pitch_joint",   "left_wrist_yaw_joint",    "right_shoulder_pitch_joint", "right_shoulder_roll_joint",
-                                   "right_shoulder_yaw_joint", "right_elbow_joint",       "right_wrist_roll_joint",     "right_wrist_pitch_joint",
-                                   "right_wrist_yaw_joint"};
+            // LimX SDK motor order mapping for WF_TRON1A:
+            // LimX SDK motor indices: 0: LF_HAA, 1: LF_HFE, 2: LF_KFE, 3: LF_WHL
+            //                         4: LH_HAA, 5: LH_HFE, 6: LH_KFE, 7: LH_WHL (not used)
+            //                         8: RF_HAA, 9: RF_HFE, 10: RF_KFE, 11: RF_WH
+            //                         12: RH_HAA, 13: RH_HFE, 14: RH_KFE, 15: RH_WHL (not used)
+            // Canonical joint names: abad_L_Joint, hip_L_Joint, knee_L_Joint, wheel_L_Joint,
+            //                        abad_R_Joint, hip_R_Joint, knee_R_Joint, wheel_R_Joint
+            // Direct mapping: abad_L->0, hip_L->1, knee_L->2, wheel_L->3,
+            //                 abad_R->8, hip_R->9, knee_R->10, wheel_R->11
+            std::map<std::string, size_t> canonicalToLimxMotorIndex = {
+                {"abad_L_Joint", 0},
+                {"hip_L_Joint", 1},
+                {"knee_L_Joint", 2},
+                {"wheel_L_Joint", 3},
+                {"abad_R_Joint", 8},
+                {"hip_R_Joint", 9},
+                {"knee_R_Joint", 10},
+                {"wheel_R_Joint", 11}
+            };
 
-            // Create mapping between canonical data order and Hardware order
-            hardwareToDataMapping_.resize(HardwareJointNames_.size());
-            dataToHardwareMapping_.resize(CanonicalJointNames_.size());
+            // Initialize mappings with invalid values
+            dataToHardwareMapping_.resize(CanonicalJointNames_.size(), SIZE_MAX);
+            // LimX SDK has 16 motors total
+            hardwareToDataMapping_.resize(16, SIZE_MAX);
 
-            // Initialize mappings with invalid values to detect unset mappings
-            std::fill(hardwareToDataMapping_.begin(), hardwareToDataMapping_.end(), SIZE_MAX);
-            std::fill(dataToHardwareMapping_.begin(), dataToHardwareMapping_.end(), SIZE_MAX);
-
-            // Create mapping: canonical (data) order -> Hardware order
+            // Create mapping: canonical (data) order -> LimX SDK motor index
             for (size_t dataIdx = 0; dataIdx < CanonicalJointNames_.size(); ++dataIdx) {
                 const std::string& canonicalJointName = CanonicalJointNames_[dataIdx];
-
-                // Find this joint in the Hardware order
-                auto it = std::find(HardwareJointNames_.begin(), HardwareJointNames_.end(), canonicalJointName);
-                if (it != HardwareJointNames_.end()) {
-                    size_t hardwareIdx = std::distance(HardwareJointNames_.begin(), it);
-
-                    // Bounds check before setting mapping
-                    if (hardwareIdx < hardwareToDataMapping_.size()) {
-                        hardwareToDataMapping_[hardwareIdx] = dataIdx;
-                        dataToHardwareMapping_[dataIdx] = hardwareIdx;
-                    } else {
-                        RCLCPP_ERROR(this->get_logger(), "Hardware index %zu out of bounds for mapping array size %zu", hardwareIdx,
-                                     hardwareToDataMapping_.size());
-                    }
+                auto it = canonicalToLimxMotorIndex.find(canonicalJointName);
+                if (it != canonicalToLimxMotorIndex.end()) {
+                    size_t limxMotorIdx = it->second;
+                    dataToHardwareMapping_[dataIdx] = limxMotorIdx;
+                    hardwareToDataMapping_[limxMotorIdx] = dataIdx;
+                    RCLCPP_INFO(this->get_logger(), "Mapped canonical joint '%s' (idx %zu) -> LimX motor index %zu",
+                               canonicalJointName.c_str(), dataIdx, limxMotorIdx);
                 } else {
-                    RCLCPP_ERROR(this->get_logger(), "Joint '%s' found in canonical order but not in Hardware order!", canonicalJointName.c_str());
+                    RCLCPP_ERROR(this->get_logger(), "Joint '%s' found in canonical order but not in LimX SDK mapping!", canonicalJointName.c_str());
                 }
             }
 
             // Validation: Check that all canonical joints were mapped
             for (size_t dataIdx = 0; dataIdx < dataToHardwareMapping_.size(); ++dataIdx) {
                 if (dataToHardwareMapping_[dataIdx] == SIZE_MAX) {
-                    RCLCPP_ERROR(this->get_logger(), "Canonical index %zu was not mapped to any Hardware joint", dataIdx);
-                } else if (dataToHardwareMapping_[dataIdx] >= HardwareJointNames_.size()) {
-                    RCLCPP_ERROR(this->get_logger(), "Invalid mapping: Canonical index %zu maps to invalid Hardware index %zu", dataIdx,
-                                 dataToHardwareMapping_[dataIdx]);
-                }
-            }
-
-            // Validation: Check that all Hardware joints were mapped
-            for (size_t hardwareIdx = 0; hardwareIdx < hardwareToDataMapping_.size(); ++hardwareIdx) {
-                if (hardwareToDataMapping_[hardwareIdx] == SIZE_MAX) {
-                    RCLCPP_WARN(this->get_logger(), "Hardware index %zu was not mapped to any canonical joint", hardwareIdx);
-                } else if (hardwareToDataMapping_[hardwareIdx] >= CanonicalJointNames_.size()) {
-                    RCLCPP_ERROR(this->get_logger(), "Invalid mapping: Hardware index %zu maps to invalid canonical index %zu", hardwareIdx,
-                                 hardwareToDataMapping_[hardwareIdx]);
+                    RCLCPP_ERROR(this->get_logger(), "Canonical index %zu (%s) was not mapped to any LimX motor index",
+                               dataIdx, dataIdx < CanonicalJointNames_.size() ? CanonicalJointNames_[dataIdx].c_str() : "unknown");
+                } else if (dataToHardwareMapping_[dataIdx] >= 16) {
+                    RCLCPP_ERROR(this->get_logger(), "Invalid mapping: Canonical index %zu maps to invalid LimX motor index %zu",
+                               dataIdx, dataToHardwareMapping_[dataIdx]);
                 }
             }
         }
@@ -439,32 +375,36 @@ namespace crl::unitree::hardware::wf_tron1a {
             crl::humanoid::commons::RobotSensor sensorInput;
             crl::humanoid::commons::RobotState robotState;
 
-            // Thread-safe access to state
-            unitree_hg::msg::dds_::LowState_ currentState;
+            // Thread-safe access to LimX SDK data
+            limxsdk::RobotState currentRobotState;
+            limxsdk::ImuData currentImu;
             JoyData currentJoy;
             {
                 std::lock_guard<std::mutex> stateLock(stateMutex_);
+                std::lock_guard<std::mutex> imuLock(imuMutex_);
                 std::lock_guard<std::mutex> joyLock(joyMutex_);
-                currentState = state_;
+                currentRobotState = robot_state_;
+                currentImu = imu_data_;
                 currentJoy = joy_;
             }
 
-            // Populate IMU data using DDS message structure
+            // Populate IMU data from LimX SDK
             sensorInput.accelerometer = crl::V3D(
-                currentState.imu_state().accelerometer()[0],
-                currentState.imu_state().accelerometer()[1],
-                currentState.imu_state().accelerometer()[2]
+                currentImu.acc[0],
+                currentImu.acc[1],
+                currentImu.acc[2]
             );
             sensorInput.gyroscope = crl::V3D(
-                currentState.imu_state().gyroscope()[0],
-                currentState.imu_state().gyroscope()[1],
-                currentState.imu_state().gyroscope()[2]
+                currentImu.gyro[0],
+                currentImu.gyro[1],
+                currentImu.gyro[2]
             );
+            // LimX SDK quaternion order: [w, x, y, z]
             sensorInput.imuOrientation = crl::Quaternion(
-                currentState.imu_state().quaternion()[0],
-                currentState.imu_state().quaternion()[1],
-                currentState.imu_state().quaternion()[2],
-                currentState.imu_state().quaternion()[3]
+                currentImu.quat[0],  // w
+                currentImu.quat[1],  // x
+                currentImu.quat[2],  // y
+                currentImu.quat[3]   // z
             );
 
             // Populate joint sensor data using mappings
@@ -474,14 +414,14 @@ namespace crl::unitree::hardware::wf_tron1a {
                 if (dataIdx < dataToHardwareMapping_.size()) {
                     size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
 
-                    if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
+                    if (hardwareIdx != SIZE_MAX && hardwareIdx < currentRobotState.q.size()) {
                         sensorInput.jointSensors[dataIdx].jointName = CanonicalJointNames_[dataIdx];
-                        sensorInput.jointSensors[dataIdx].jointPos = currentState.motor_state()[hardwareIdx].q();
-                        sensorInput.jointSensors[dataIdx].jointVel = currentState.motor_state()[hardwareIdx].dq();
-                        sensorInput.jointSensors[dataIdx].jointTorque = currentState.motor_state()[hardwareIdx].tau_est();
+                        sensorInput.jointSensors[dataIdx].jointPos = currentRobotState.q[hardwareIdx];
+                        sensorInput.jointSensors[dataIdx].jointVel = currentRobotState.dq[hardwareIdx];
+                        sensorInput.jointSensors[dataIdx].jointTorque = currentRobotState.tau[hardwareIdx];
                         robotState.jointStates[dataIdx].jointName = CanonicalJointNames_[dataIdx];
-                        robotState.jointStates[dataIdx].jointPos = currentState.motor_state()[hardwareIdx].q();
-                        robotState.jointStates[dataIdx].jointVel = currentState.motor_state()[hardwareIdx].dq();
+                        robotState.jointStates[dataIdx].jointPos = currentRobotState.q[hardwareIdx];
+                        robotState.jointStates[dataIdx].jointVel = currentRobotState.dq[hardwareIdx];
                     } else {
                         // Set defaults for unmapped joints
                         sensorInput.jointSensors[dataIdx].jointName = CanonicalJointNames_[dataIdx];
@@ -513,8 +453,8 @@ namespace crl::unitree::hardware::wf_tron1a {
                     if (dataIdx < dataToHardwareMapping_.size()) {
                         size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
 
-                        if (hardwareIdx != SIZE_MAX && hardwareIdx < currentState.motor_state().size()) {
-                            double angle = currentState.motor_state()[hardwareIdx].q();
+                        if (hardwareIdx != SIZE_MAX && hardwareIdx < currentRobotState.q.size()) {
+                            double angle = currentRobotState.q[hardwareIdx];
                             if (angle > this->jointPosMax_[dataIdx]) {
                                 RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                                                    "Joint %s (idx %zu) angle %f exceeds max %f",
@@ -576,33 +516,33 @@ namespace crl::unitree::hardware::wf_tron1a {
             // populate control signal using joint mappings
             bool eStop = this->data_->softEStop;
 
-            // Clear all motor commands first (G1 has up to 35 motors in DDS structure)
-            for (size_t i = 0; i < cmd_.motor_cmd().size(); i++) {
-                cmd_.motor_cmd()[i].mode() = 0;
-                cmd_.motor_cmd()[i].kp() = 0;
-                cmd_.motor_cmd()[i].kd() = 0;
-                cmd_.motor_cmd()[i].q() = 0.0f;
-                cmd_.motor_cmd()[i].dq() = 0.0f;
-                cmd_.motor_cmd()[i].tau() = 0;
+            // Clear all motor commands first
+            for (size_t i = 0; i < robot_cmd_.mode.size(); i++) {
+                robot_cmd_.mode[i] = 0;
+                robot_cmd_.Kp[i] = 0.0f;
+                robot_cmd_.Kd[i] = 0.0f;
+                robot_cmd_.q[i] = 0.0f;
+                robot_cmd_.dq[i] = 0.0f;
+                robot_cmd_.tau[i] = 0.0f;
             }
 
-            cmd_.mode_pr() = 0; // PR mode 0, AB mode 1
-            cmd_.mode_machine() = mode_machine_;
-
+            // Set timestamp
+            robot_cmd_.stamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
 
             // Apply control commands using mappings
             for (size_t dataIdx = 0; dataIdx < control.jointControl.size() && dataIdx < CanonicalJointNames_.size(); ++dataIdx) {
                 if (dataIdx < dataToHardwareMapping_.size()) {
                     size_t hardwareIdx = dataToHardwareMapping_[dataIdx];
 
-                    if (hardwareIdx != SIZE_MAX && hardwareIdx < cmd_.motor_cmd().size()) {
+                    if (hardwareIdx != SIZE_MAX && hardwareIdx < robot_cmd_.mode.size()) {
                         if (eStop) {
-                            cmd_.motor_cmd()[hardwareIdx].mode() = 0;
-                            cmd_.motor_cmd()[hardwareIdx].kp() = 0;
-                            cmd_.motor_cmd()[hardwareIdx].kd() = 0;
-                            cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
-                            cmd_.motor_cmd()[hardwareIdx].dq() = 0.0f;
-                            cmd_.motor_cmd()[hardwareIdx].tau() = 0;
+                            robot_cmd_.mode[hardwareIdx] = 0;
+                            robot_cmd_.Kp[hardwareIdx] = 0.0f;
+                            robot_cmd_.Kd[hardwareIdx] = 0.0f;
+                            robot_cmd_.q[hardwareIdx] = 0.0f;
+                            robot_cmd_.dq[hardwareIdx] = 0.0f;
+                            robot_cmd_.tau[hardwareIdx] = 0.0f;
                         } else {
                             double jointKp = (control.jointControl[dataIdx].stiffness > 0) ?
                                             control.jointControl[dataIdx].stiffness :
@@ -612,39 +552,39 @@ namespace crl::unitree::hardware::wf_tron1a {
                                             this->jointDampingDefault_[dataIdx];
                             switch (static_cast<int>(control.jointControl[dataIdx].mode)) {
                                 case 1:  // Position mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() = jointKp;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
-                                    cmd_.motor_cmd()[hardwareIdx].q() = (float)control.jointControl[dataIdx].desiredPos;
-                                    cmd_.motor_cmd()[hardwareIdx].dq() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].tau() = 0;
+                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.Kp[hardwareIdx] = jointKp;
+                                    robot_cmd_.Kd[hardwareIdx] = jointKd;
+                                    robot_cmd_.q[hardwareIdx] = control.jointControl[dataIdx].desiredPos;
+                                    robot_cmd_.dq[hardwareIdx] = 0.0f;
+                                    robot_cmd_.tau[hardwareIdx] = 0.0f;
                                     break;
 
                                 case 2:  // Velocity mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
-                                    cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
-                                    cmd_.motor_cmd()[hardwareIdx].dq() = (float)control.jointControl[dataIdx].desiredSpeed;
-                                    cmd_.motor_cmd()[hardwareIdx].tau() = 0;
+                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.Kp[hardwareIdx] = 0.0f;
+                                    robot_cmd_.Kd[hardwareIdx] = jointKd;
+                                    robot_cmd_.q[hardwareIdx] = 0.0f;
+                                    robot_cmd_.dq[hardwareIdx] = control.jointControl[dataIdx].desiredSpeed;
+                                    robot_cmd_.tau[hardwareIdx] = 0.0f;
                                     break;
 
                                 case 3:  // Force/Torque mode
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 1;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() = jointKp;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() = jointKd;
-                                    cmd_.motor_cmd()[hardwareIdx].q() = (float)control.jointControl[dataIdx].desiredPos;
-                                    cmd_.motor_cmd()[hardwareIdx].dq() = (float)control.jointControl[dataIdx].desiredSpeed;
-                                    cmd_.motor_cmd()[hardwareIdx].tau() = (float)control.jointControl[dataIdx].desiredTorque;
+                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.Kp[hardwareIdx] = jointKp;
+                                    robot_cmd_.Kd[hardwareIdx] = jointKd;
+                                    robot_cmd_.q[hardwareIdx] = control.jointControl[dataIdx].desiredPos;
+                                    robot_cmd_.dq[hardwareIdx] = control.jointControl[dataIdx].desiredSpeed;
+                                    robot_cmd_.tau[hardwareIdx] = control.jointControl[dataIdx].desiredTorque;
                                     break;
 
                                 default:  // Motor brake (same as soft e-stop)
-                                    cmd_.motor_cmd()[hardwareIdx].mode() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].kp() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].kd() = 0;
-                                    cmd_.motor_cmd()[hardwareIdx].q() = 0.0f;
-                                    cmd_.motor_cmd()[hardwareIdx].dq() = 0.0f;
-                                    cmd_.motor_cmd()[hardwareIdx].tau() = 0;
+                                    robot_cmd_.mode[hardwareIdx] = 0;
+                                    robot_cmd_.Kp[hardwareIdx] = 0.0f;
+                                    robot_cmd_.Kd[hardwareIdx] = 0.0f;
+                                    robot_cmd_.q[hardwareIdx] = 0.0f;
+                                    robot_cmd_.dq[hardwareIdx] = 0.0f;
+                                    robot_cmd_.tau[hardwareIdx] = 0.0f;
                                     break;
                             }
                         }
@@ -661,45 +601,21 @@ namespace crl::unitree::hardware::wf_tron1a {
                 }
             }
 
-            // Calculate CRC and publish via SDK
-            cmd_.crc() = Crc32Core((uint32_t*)&cmd_, (sizeof(cmd_) >> 2) - 1);
-            lowCommandPublisher_->Write(cmd_);
+            // Publish command via LimX SDK
+            wheellegged_->publishRobotCmd(robot_cmd_);
         }
 
-        void InitLowCmd() {
-            // Initialize DDS command structure
-            cmd_.mode_pr() = 0;
-            cmd_.mode_machine() = mode_machine_;  // Use stored mode_machine value
-
-            // Initialize all motors (G1 DDS structure has 35 motor slots)
-            for (size_t i = 0; i < cmd_.motor_cmd().size(); i++) {
-                cmd_.motor_cmd()[i].mode() = 0x01;  // motor switch to servo (PMSM) mode
-                cmd_.motor_cmd()[i].q() = 0.0f;
-                cmd_.motor_cmd()[i].dq() = 0.0f;
-                cmd_.motor_cmd()[i].kp() = 0;
-                cmd_.motor_cmd()[i].kd() = 0;
-                cmd_.motor_cmd()[i].tau() = 0;
-            }
-
-            // Initialize reserve array
-            for (size_t i = 0; i < cmd_.reserve().size(); i++) {
-                cmd_.reserve()[i] = 0;
-            }
-
-            cmd_.crc() = 0;
-        }
 
     private:
         // Joint mappings
         std::vector<std::string> CanonicalJointNames_;  // Canonical order (policy order)
-        std::vector<std::string> HardwareJointNames_;   // Hardware order (robot-specific)
-        std::vector<size_t> hardwareToDataMapping_;     // Maps Hardware XML index to canonical index
-        std::vector<size_t> dataToHardwareMapping_;     // Maps canonical index to Hardware XML index
+        std::vector<size_t> hardwareToDataMapping_;     // Maps LimX SDK motor index to canonical index
+        std::vector<size_t> dataToHardwareMapping_;     // Maps canonical index to LimX SDK motor index
 
         // SDK configuration
-        std::string networkInterface_;
+        std::string robotIpAddress_;
         bool isSDKInitialized_;
-        uint8_t mode_machine_;
+        limxsdk::Wheellegged* wheellegged_;
 
         // Joystick velocity parameters
         double joystickMaxForwardVel_;
@@ -712,20 +628,19 @@ namespace crl::unitree::hardware::wf_tron1a {
         std::vector<StateKeyBinding> stateKeybindings_;
         StateNameToEnumMap stateNameToEnumMap_;
 
-        // SDK publishers and subscribers
-        ::unitree::robot::ChannelPublisherPtr<unitree_hg::msg::dds_::LowCmd_> lowCommandPublisher_;
-        ::unitree::robot::ChannelSubscriberPtr<unitree_hg::msg::dds_::LowState_> lowStateSubscriber_;
-
-        // DDS message types
-        unitree_hg::msg::dds_::LowCmd_ cmd_;
-        unitree_hg::msg::dds_::LowState_ state_;
+        // LimX SDK data structures
+        limxsdk::RobotCmd robot_cmd_;
+        limxsdk::RobotState robot_state_;
+        limxsdk::ImuData imu_data_;
+        limxsdk::SensorJoy sensor_joy_;
         JoyData joy_;
 
         // Thread safety
         std::mutex stateMutex_;
+        std::mutex imuMutex_;
         std::mutex joyMutex_;
     };
 
-}  // namespace crl::unitree::hardware::g1
+}  // namespace crl::unitree::hardware::wf_tron1a
 
-#endif  //CRL_HUMANOID_HARDWARE_G1_NODE
+#endif  //CRL_HUMANOID_HARDWARE_WF_TRON1A_NODE
