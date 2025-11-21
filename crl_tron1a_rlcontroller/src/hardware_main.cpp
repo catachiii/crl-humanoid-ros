@@ -6,7 +6,7 @@
 #include <crl_humanoid_commons/nodes/CommNode.h>
 
 #include <crl_humanoid_simulator/WF_TRON1ASimNode.h>
-#include <crl_humanoid_hardware/WF_TRON1ANode.h>
+#include <crl_humanoid_hardware/WF_TRON1A.h>
 
 #include <crl_tron1a_rlcontroller/CRLTron1ARLControllerNode.h>
 #include <crl_tron1a_rlcontroller/CRLTron1AWalkController.h>
@@ -24,13 +24,12 @@ int main(int argc, char** argv) {
     options.allow_unrecognised_options();
     options.add_options()("model", "Robot model", cxxopts::value<std::string>()->default_value("g1"));
     auto result = options.parse(argc, argv);
-    std::string modelName = "G1";
-    if (result["model"].as<std::string>() == "g1") {
-        modelName = "G1";
-    } else if (result["model"].as<std::string>() == "wf_tron1a") {
-        modelName = "WF_TRON1A"; 
+    std::string modelName = "WF_TRON1A";
+    if (result["model"].as<std::string>() == "wf_tron1a") {
+        modelName = "WF_TRON1A";
     } else {
-        RCLCPP_WARN(rclcpp::get_logger("sim"), "Unknown robot model: %s", result["model"].as<std::string>().c_str());
+        RCLCPP_WARN(rclcpp::get_logger("hardware"), "Unknown robot model '%s', defaulting to WF_TRON1A",
+                    result["model"].as<std::string>().c_str());
     }
 
     // transitions
@@ -69,25 +68,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<crl::humanoid::commons::RobotNode<States, Machines, 1>> robotNode;
     
 
-    if (modelName == "G1") {
-        // Create state name to enum mapping for G1Node with all 5 states
-        using G1NodeType = crl::unitree::hardware::g1::G1Node<States, Machines, 1>;
-        auto stateMapping = G1NodeType::createStateMapping({
-            {"ESTOP", States::ESTOP},
-            {"STAND", States::STAND},
-            {"WALK", States::WALK},
-            {"GETUP0", States::GETUP0},
-            {"CROUCH", States::CROUCH},
-            {"GETUP1", States::GETUP1},
-            {"SITDOWN", States::SITDOWN}
-        });
-
-        robotNode = std::make_shared<G1NodeType>(
-            model, data, monitoring, machine.is_transitioning(), stateMapping);
-    
-    } else if (modelName == "WF_TRON1A") {
+    if (modelName == "WF_TRON1A") {
         // Create state name to enum mapping for Tron1aNode with all 5 states
-        using Tron1aNodeType = crl::unitree::hardware::wf_tron1a::WF_TRON1ANode<States, Machines, 1>;
+        using Tron1aNodeType = crl::unitree::hardware::wf_tron1a::Tron1aNode<States, Machines, 1>;
         auto stateMapping = Tron1aNodeType::createStateMapping({
             {"ESTOP", States::ESTOP},
             {"STAND", States::STAND},

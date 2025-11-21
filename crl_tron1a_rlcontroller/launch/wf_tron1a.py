@@ -14,7 +14,7 @@ def generate_launch_description():
     hardware_config = os.path.join(
         get_package_share_directory("crl_tron1a_rlcontroller"),
         'config',
-        'wf_tron1a_simulator.yaml'
+        'wf_tron1a_hardware.yaml'
     )
 
     return LaunchDescription([

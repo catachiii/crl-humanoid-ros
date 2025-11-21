@@ -19,7 +19,8 @@
       time_step_size: 0.002  # 500 Hz to match loop_frequency in deployment (1/500.0 = 0.002)
       robot_controllers_policy_file: "/home/nathan_lacour/CRL_Humanoid/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_stand/policy.onnx"
       robot_controllers_encoder_file: "/home/nathan_lacour/CRL_Humanoid/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_stand/encoder.onnx"
-      
+
+
       # RL-specific controller parameters
       # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
       # Control parameters
@@ -98,10 +99,23 @@
     ros__parameters:
       time_step_size: 0.002 #0.001667  # sim rate
       robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"
-      joystick_max_forward_velocity: 0.8   # Maximum forward walking speed
-      joystick_max_backward_velocity: 0.8  # Maximum backward walking speed
-      joystick_max_sideways_velocity: 0.3  # Maximum sideways walking speed
+      robot_ip_address: "127.0.0.1"  # For simulation use "127.0.0.1", for real robot use "10.192.1.2" or robot's IP
+
+      joystick_max_forward_velocity: 4.0   # Maximum forward walking speed
+      joystick_max_backward_velocity: 4.0  # Maximum backward walking speed
+      joystick_max_sideways_velocity: 0.8  # Maximum sideways walking speed
       joystick_max_turning_velocity: 1.0   # Maximum turning speed
+
+      keybinding_modifier: "L1"    # Modifier button to hold
+
+      # State keybindings - flexible configuration for multiple states
+      # NOTE: The states listed here must match the states defined in the main.cpp file
+      # Currently available states: ESTOP, STAND, WALK
+      # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
+      state_keybindings:
+        states: ["ESTOP", "SIT", "STAND", "WALK"]  # State names (must match enum in main.cpp)
+        keys:   ["B",     "A",     "X" , "Y"]     # Corresponding keys for each state
+
       # Elastic band parameters (adjust target_height to lower the band)
       elastic_band_enabled: true
       elastic_band_stiffness: 5000.0 # 1000.0 before     # N/m

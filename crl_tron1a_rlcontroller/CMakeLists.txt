@@ -17,6 +17,7 @@ find_package(crl_humanoid_commons REQUIRED)
 find_package(crl_fsm REQUIRED)
 find_package(crl_ros_helper REQUIRED)
 find_package(crl_humanoid_simulator REQUIRED)
+find_package(crl_humanoid_hardware REQUIRED)
 find_package(crl_g1_rlcontroller REQUIRED)
 # find_package(onnxruntime REQUIRED) # if you plan to link to it
 
@@ -41,6 +42,23 @@ ament_target_dependencies(simulator_main
 find_package(Eigen3 REQUIRED)
 target_link_libraries(simulator_main Eigen3::Eigen)
 
+# Hardware executable
+add_executable(hardware_main
+    src/hardware_main.cpp
+    src/CRLTron1AWalkController.cpp
+    src/LimXStandNode.cpp
+)
+ament_target_dependencies(hardware_main 
+    rclcpp 
+    crl_humanoid_commons 
+    crl_fsm 
+    crl_ros_helper
+    crl_humanoid_simulator
+    crl_humanoid_hardware
+    crl_g1_rlcontroller
+)
+target_link_libraries(hardware_main Eigen3::Eigen)
+
 # If you add a monitor_main later, enable this:
 # add_executable(monitor_main src/monitor_main.cpp)
 # ament_target_dependencies(monitor_main rclcpp crl_humanoid_commons crl_fsm crl_ros_helper)
@@ -52,6 +70,7 @@ install(DIRECTORY data DESTINATION share/${PROJECT_NAME} OPTIONAL)
 
 install(TARGETS
   simulator_main
+  hardware_main
   # monitor_main
   DESTINATION lib/${PROJECT_NAME}
 )
