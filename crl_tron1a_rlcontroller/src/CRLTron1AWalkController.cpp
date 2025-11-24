@@ -611,8 +611,6 @@ void CRLTron1AWalkController::computeObservation() {
 }
 
 void CRLTron1AWalkController::computeEncoder() {
-    RCLCPP_INFO(logger_, "=== computeEncoder() called ===");
-    
     if (!encoderSessionPtr_) {
         RCLCPP_ERROR(logger_, "Encoder session not available but required!");
         return;
@@ -647,14 +645,10 @@ void CRLTron1AWalkController::computeEncoder() {
     for (int i = 0; i < encoderOutputSize_; i++) {
         encoderOut_[i] = *(outputValues[0].GetTensorMutableData<robot_controllers::tensor_element_t>() + i);
     }
-    
-    RCLCPP_INFO(logger_, "Encoder output computed successfully (size: %d)", 
-                encoderOutputSize_);
+
 }
 
 void CRLTron1AWalkController::computeActions() {
-    RCLCPP_INFO(logger_, "=== computeActions() called ===");
-    
     Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtArenaAllocator,
                                                             OrtMemType::OrtMemTypeDefault);
     std::vector<Ort::Value> inputValues;
@@ -671,20 +665,16 @@ void CRLTron1AWalkController::computeActions() {
     for (const auto &item : encoderOut_) {
         combined_obs.push_back(item);
     }
-    RCLCPP_INFO(logger_, "Added encoder output to policy input (size: %zu)", encoderOut_.size());
     
     // Add current observations
     for (const auto &item : observations_) {
         combined_obs.push_back(item);
     }
-    RCLCPP_INFO(logger_, "Added current observations to policy input (size: %zu)", observations_.size());
     
     // Add scaled commands
     for (int i = 0; i < static_cast<int>(scaled_commands_.size()); i++) {
         combined_obs.push_back(scaled_commands_[i]);
     }
-    RCLCPP_INFO(logger_, "Added scaled commands to policy input (size: %zu, values: [%.3f, %.3f, %.3f])", 
-                scaled_commands_.size(), scaled_commands_[0], scaled_commands_[1], scaled_commands_[2]);
     
     // Get policy input shape
     auto policyInputShape = session_.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
@@ -697,8 +687,6 @@ void CRLTron1AWalkController::computeActions() {
         shapeStr += std::to_string(inputShapeVec[i]);
     }
     shapeStr += "]";
-    RCLCPP_INFO(logger_, "Policy input shape from ONNX: %s, combined_obs size: %zu", 
-                shapeStr.c_str(), combined_obs.size());
     
     // Create tensor shape - handle dynamic dimensions (-1)
     // For shapes like [-1, 34], replace -1 with 1 (batch size)
@@ -763,21 +751,7 @@ void CRLTron1AWalkController::computeActions() {
     std::transform(action_.begin(), action_.end(), action_.begin(),
                    [actionMin, actionMax](double x) { return std::max(actionMin, std::min(actionMax, x)); });
     
-    if (!model_->jointNames.empty() && action_.size() == model_->jointNames.size()) {
-        std::ostringstream oss;
-        oss << "Policy inference completed. Actions:";
-        oss << std::fixed << std::setprecision(3);
-        for (size_t i = 0; i < action_.size(); ++i) {
-            oss << " " << model_->jointNames[i] << "=" << action_[i];
-            if (i + 1 < action_.size()) {
-                oss << ",";
-            }
-        }
-        RCLCPP_INFO(logger_, "%s", oss.str().c_str());
-    } else {
-        RCLCPP_INFO(logger_, "Policy inference completed. Total actions: %zu", action_.size());
-    }
-    }
+}
 
 void CRLTron1AWalkController::computeAndApplyControlSignals(double dt) {
     
@@ -816,7 +790,6 @@ void CRLTron1AWalkController::computeAndApplyControlSignals(double dt) {
     
     // Compute observation & actions with decimation (matches original deploy logic)
     if (loopCount_ % controlCfg_.decimation == 0) {
-        RCLCPP_INFO(logger_, "Decimation check passed (loopCount=%ld), calling computeObservation/Encoder/Actions", loopCount_);
         computeObservation();
         computeEncoder();
         computeActions();
@@ -829,7 +802,7 @@ void CRLTron1AWalkController::computeAndApplyControlSignals(double dt) {
     
     // Log control signals being applied (only on decimation steps to avoid spam)
     static int controlLogCounter = 0;
-    bool shouldLogControl = (loopCount_ % controlCfg_.decimation == 0);
+    bool shouldLogControl = false;
     
     for (size_t i = 0; i < model_->jointNames.size(); i++) {
         control.jointControl[i].name = model_->jointNames[i];
