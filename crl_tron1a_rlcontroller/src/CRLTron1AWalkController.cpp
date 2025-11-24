@@ -12,6 +12,7 @@
 #include <nlohmann/json.hpp>
 #include <crl-basic/utils/mathDefs.h>
 #include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 namespace crl::tron1a::rlcontroller {
 
@@ -86,18 +87,47 @@ bool CRLTron1AWalkController::loadModelFromParams(rclcpp::Node& node) {
         return false;
     }
 
-    std::string policyModelPath;
-    std::string encoderModelPath;
+    std::string policyModelPathParam;
+    std::string encoderModelPathParam;
 
-    if (!node.get_parameter("robot_controllers_policy_file", policyModelPath)) {
+    if (!node.get_parameter("robot_controllers_policy_file", policyModelPathParam)) {
         RCLCPP_ERROR(logger_, "Failed to retrieve policy path from the parameter server!");
         return false;
     }
     // encoder is mandatory
-    if (!node.get_parameter("robot_controllers_encoder_file", encoderModelPath) || encoderModelPath.empty()) {
+    if (!node.get_parameter("robot_controllers_encoder_file", encoderModelPathParam) || encoderModelPathParam.empty()) {
         RCLCPP_ERROR(logger_, "Failed to retrieve encoder path from the parameter server! Encoder is required.");
         return false;
     }
+
+    std::string packageShareDir;
+    auto resolveModelPath = [&](const std::string& paramValue, std::filesystem::path& outPath) -> bool {
+        std::filesystem::path candidate(paramValue);
+        if (candidate.is_absolute()) {
+            outPath = candidate;
+            return true;
+        }
+
+        if (packageShareDir.empty()) {
+            try {
+                packageShareDir = ament_index_cpp::get_package_share_directory("crl_tron1a_rlcontroller");
+            } catch (const std::exception& e) {
+                RCLCPP_ERROR(logger_, "Failed to locate package share directory: %s", e.what());
+                return false;
+            }
+        }
+        outPath = std::filesystem::path(packageShareDir) / candidate;
+        return true;
+    };
+
+    std::filesystem::path policyModelPath;
+    std::filesystem::path encoderModelPath;
+    if (!resolveModelPath(policyModelPathParam, policyModelPath) ||
+        !resolveModelPath(encoderModelPathParam, encoderModelPath)) {
+        return false;
+    }
+    const std::string policyModelPathStr = policyModelPath.string();
+    const std::string encoderModelPathStr = encoderModelPath.string();
 
     // Create session options similar to WheelfootController
     Ort::SessionOptions sessionOptions;
@@ -108,7 +138,7 @@ bool CRLTron1AWalkController::loadModelFromParams(rclcpp::Node& node) {
 
     // Load policy session
     try {
-        session_ = Ort::Session(env_, policyModelPath.c_str(), sessionOptions);
+        session_ = Ort::Session(env_, policyModelPathStr.c_str(), sessionOptions);
         
         // Get policy input/output names and shapes
         policyInputNames_.clear();
@@ -126,7 +156,7 @@ bool CRLTron1AWalkController::loadModelFromParams(rclcpp::Node& node) {
 
     // Load encoder session (required)
     try {
-        encoderSessionPtr_ = std::make_unique<Ort::Session>(env_, encoderModelPath.c_str(), sessionOptions);
+        encoderSessionPtr_ = std::make_unique<Ort::Session>(env_, encoderModelPathStr.c_str(), sessionOptions);
         
         // Get encoder input/output names and shapes
         encoderInputNames_.clear();

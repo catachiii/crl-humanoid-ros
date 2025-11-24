@@ -1,17 +1,70 @@
 #ifndef CRL_TRON1A_RLCONTROLLER_WALKCONTROLLER_H
 #define CRL_TRON1A_RLCONTROLLER_WALKCONTROLLER_H
 
+#include <array>
+#include <algorithm>
+#include <cmath>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <array>
-#include <map>
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <onnxruntime_cxx_api.h>
 #include <rclcpp/rclcpp.hpp>
 #include <crl-basic/utils/mathDefs.h>
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
-#include "crl_tron1a_rlcontroller/ControllerBase.h"
+
+namespace robot_controllers {
+
+template <typename T>
+constexpr T square(T value) {
+    return value * value;
+}
+
+template <typename SCALAR_T>
+Eigen::Matrix<SCALAR_T, 3, 1> quatToZyx(const Eigen::Quaternion<SCALAR_T> &q) {
+    Eigen::Matrix<SCALAR_T, 3, 1> zyx;
+
+    SCALAR_T as = std::min(static_cast<SCALAR_T>(-2.) * (q.x() * q.z() - q.w() * q.y()), static_cast<SCALAR_T>(.99999));
+    zyx(0) = std::atan2(static_cast<SCALAR_T>(2) * (q.x() * q.y() + q.w() * q.z()),
+                        square(q.w()) + square(q.x()) - square(q.y()) - square(q.z()));
+    zyx(1) = std::asin(as);
+    zyx(2) = std::atan2(static_cast<SCALAR_T>(2) * (q.y() * q.z() + q.w() * q.x()),
+                        square(q.w()) - square(q.x()) - square(q.y()) + square(q.z()));
+    return zyx;
+}
+
+template <typename SCALAR_T>
+Eigen::Matrix<SCALAR_T, 3, 3> getRotationMatrixFromZyxEulerAngles(
+    const Eigen::Matrix<SCALAR_T, 3, 1> &eulerAngles) {
+    const SCALAR_T z = eulerAngles(0);
+    const SCALAR_T y = eulerAngles(1);
+    const SCALAR_T x = eulerAngles(2);
+
+    const SCALAR_T c1 = std::cos(z);
+    const SCALAR_T c2 = std::cos(y);
+    const SCALAR_T c3 = std::cos(x);
+    const SCALAR_T s1 = std::sin(z);
+    const SCALAR_T s2 = std::sin(y);
+    const SCALAR_T s3 = std::sin(x);
+
+    const SCALAR_T s2s3 = s2 * s3;
+    const SCALAR_T s2c3 = s2 * c3;
+
+    Eigen::Matrix<SCALAR_T, 3, 3> rotationMatrix;
+    rotationMatrix << c1 * c2,      c1 * s2s3 - s1 * c3,       c1 * s2c3 + s1 * s3,
+                      s1 * c2,      s1 * s2s3 + c1 * c3,       s1 * s2c3 - c1 * s3,
+                      -s2,          c2 * s3,                   c2 * c3;
+    return rotationMatrix;
+}
+
+using vector3_t = Eigen::Matrix<double, 3, 1>;
+using vector_t = Eigen::Matrix<double, Eigen::Dynamic, 1>;
+using matrix_t = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
+using tensor_element_t = float;
+
+}  // namespace robot_controllers
 
 namespace crl::tron1a::rlcontroller {
 

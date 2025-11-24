@@ -12,6 +12,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(crl_humanoid_commons REQUIRED)
 find_package(crl_fsm REQUIRED)
@@ -27,7 +28,6 @@ include_directories(include)
 add_executable(simulator_main 
     src/simulator_main.cpp
     src/CRLTron1AWalkController.cpp
-    src/LimXStandNode.cpp
 )
 ament_target_dependencies(simulator_main 
     rclcpp 
@@ -36,6 +36,7 @@ ament_target_dependencies(simulator_main
     crl_ros_helper
     crl_humanoid_simulator
     crl_g1_rlcontroller
+    ament_index_cpp
 )
 
 # Find and link Eigen3 (required for CRLTron1AWalkController)
@@ -46,7 +47,6 @@ target_link_libraries(simulator_main Eigen3::Eigen)
 add_executable(hardware_main
     src/hardware_main.cpp
     src/CRLTron1AWalkController.cpp
-    src/LimXStandNode.cpp
 )
 ament_target_dependencies(hardware_main 
     rclcpp 
@@ -56,6 +56,7 @@ ament_target_dependencies(hardware_main
     crl_humanoid_simulator
     crl_humanoid_hardware
     crl_g1_rlcontroller
+    ament_index_cpp
 )
 target_link_libraries(hardware_main Eigen3::Eigen)
 
