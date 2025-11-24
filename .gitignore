@@ -4,6 +4,7 @@
 CMakeLists.txt.user
 .DS_Store
 data/out
+/home/nathan_lacour/CRL_Humanoid/crl-humanoid-ros/robot_hw
 
 # imgui
 *.ini
