@@ -1,0 +1,37 @@
+# 框架默认配置
+# 机器人通信的IP地址。仿真时默认为本地主机
+# 修改此值以连接到真机系统，一般为10.192.1.2
+robot_ip: "127.0.0.1"
+
+# 机器人类型规范。支持的类型：
+# - PointFoot: Tron机器人
+# - Wheellegged: 四轮足机器人
+# - Humanoid: 人形机器人
+robot_type: "Humanoid"
+
+# 示例能力配置（可由用户覆盖）
+abilities:
+  # 此部分仅用于演示，可以为空
+  # 实际能力在用户的配置中定义
+  ability1:
+    # 必填字段，用于唯一标识能力类型
+    # 该值需与能力模块中@register_ability装饰器的参数一致，
+    # 框架通过此值动态匹配并加载对应的能力
+    type: "dummy/ability1"
+
+    # script_path: 相对于此配置文件的路径或绝对路径
+    script_path: "dummy1.py"
+
+    # 设为true时，启动时自动加载并运行该能力模块
+    autostart: true
+
+    # 能力自定义配置
+    config: {
+      update_rate: 1
+    }
+  ability2:
+    type: "dummy/ability2"
+    script_path: "dummy2.py"
+    config: {
+      update_rate: 1
+    }
