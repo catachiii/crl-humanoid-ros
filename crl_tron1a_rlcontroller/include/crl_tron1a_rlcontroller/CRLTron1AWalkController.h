@@ -76,7 +76,6 @@ namespace crl::tron1a::rlcontroller {
 
         ~CRLTron1AWalkController() override = default;
 
-        bool loadModelFromFile(const std::string &fileName);
         bool loadModelFromParams(rclcpp::Node& node);
 
         void computeAndApplyControlSignals(double dt) override;

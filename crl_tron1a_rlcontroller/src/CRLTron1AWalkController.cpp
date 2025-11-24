@@ -1,15 +1,12 @@
 #include "crl_tron1a_rlcontroller/CRLTron1AWalkController.h"
 #include <onnxruntime_cxx_api.h>
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <cmath>
 #include <algorithm>
 #include <numeric>
 #include <unordered_set>
 #include <sstream>
-#include <iomanip>
-#include <nlohmann/json.hpp>
 #include <crl-basic/utils/mathDefs.h>
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -23,61 +20,6 @@ CRLTron1AWalkController::CRLTron1AWalkController(const std::shared_ptr<crl::huma
     // Initialize counters/flags only - vectors will be initialized in loadModelFromParams
     loopCount_ = 0;
     isfirstRecObs_ = true;
-}
-
-bool CRLTron1AWalkController::loadModelFromFile(const std::string &fileName) {
-    std::ifstream file(fileName);
-    if (file.fail()) {
-        RCLCPP_ERROR(logger_, "Failed to load RL policy configuration file: %s", fileName.c_str());
-        file.close();
-        return false;
-    }
-    const auto &conf = nlohmann::json::parse(file);
-
-    numObs_ = conf["num_obs"].get<int>();
-    numActions_ = conf["num_actions"].get<int>();
-    numHistory_ = conf["num_history"].get<int>();
-    auto defaultAngles = conf["default_angles"];
-    auto actionScales = conf["action_scale"];
-    auto jointStiffness = conf["joint_stiffness"];
-    auto jointDamping = conf["joint_damping"];
-
-    crl::utils::resize(action_, numActions_);
-    crl::utils::resize(defaultJointPos_, defaultAngles.size());
-    crl::utils::resize(actionScale_, actionScales.size());
-    crl::utils::resize(jointStiffness_, jointStiffness.size());
-    crl::utils::resize(jointDamping_, jointDamping.size());
-    for (size_t i = 0; i < defaultAngles.size(); i++) {
-        defaultJointPos_[i] = defaultAngles[i].get<double>();
-        actionScale_[i] = actionScales[i].get<double>();
-        jointStiffness_[i] = jointStiffness[i].get<double>();
-        jointDamping_[i] = jointDamping[i].get<double>();
-    }
-    int totalInputDim = numObs_ * numHistory_;
-    inputData_.resize(totalInputDim);
-    outputData_.resize(numActions_);
-    inputShape_ = {1, totalInputDim};
-    outputShape_ = {1, numActions_};
-    crl::utils::resize(currentObs_, numObs_);
-    obsHistory_.resize(numHistory_);
-    for (int i = 0; i < numHistory_; i++) {
-        crl::utils::resize(obsHistory_[i], numObs_);
-        for (int j = 0; j < numObs_; j++) {
-            obsHistory_[i][j] = 0.0;
-        }
-    }
-    auto modelName = conf["model_name"].get<std::string>();
-    // Always resolve modelName relative to the config file's directory
-    std::filesystem::path configPath(fileName);
-    std::filesystem::path configDir = configPath.parent_path();
-    std::filesystem::path modelPath = configDir / modelName;
-    auto memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-
-    session_ = Ort::Session(env_, modelPath.c_str(), Ort::SessionOptions{nullptr});
-    inputTensor_ = Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(memory_info, inputData_.data(), inputData_.size(), inputShape_.data(), inputShape_.size());
-    outputTensor_ = Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(memory_info, outputData_.data(), outputData_.size(), outputShape_.data(), outputShape_.size());
-    RCLCPP_INFO(logger_, "Successfully loaded RL policy from: %s", fileName.c_str());
-    return true;
 }
 
 bool CRLTron1AWalkController::loadModelFromParams(rclcpp::Node& node) {
