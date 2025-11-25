@@ -14,7 +14,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <cxxopts.hpp>
 
-crl_fsm_states(States, ESTOP, SIT, STAND, WALK);
+crl_fsm_states(States, ESTOP, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char** argv) {
@@ -46,11 +46,9 @@ int main(int argc, char** argv) {
     // machines
     auto m1 =
         crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::ESTOP>([&]() { return std::make_shared<crl::humanoid::commons::EstopNode>(model, data); });
-    auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::SIT>(
-        [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::SIT, model, data, "sit"); });
-    auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
+    auto m2 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::STAND>(
         [&]() { return std::make_shared<crl::humanoid::commons::StarterNode>(crl::humanoid::commons::StarterNode::TargetMode::STAND, model, data, "stand"); });
-    auto m4 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
+    auto m3 = crl::fsm::make_non_persistent_ps<Machines::ONBOARD, States::WALK>(
         [&]() { return std::make_shared<crl::humanoid::commons::ControllerNode<>>(model, data); });
         // [&]() { return std::make_shared<crl::humanoid::commons::PyControllerNode>(model, data); });  # tested
 

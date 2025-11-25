@@ -1,8 +1,3 @@
-//
-// Created by Dongho Kang on 22.01.22.
-// Adapted to use MuJoCo instead of ODE
-//
-
 #ifndef CRL_HUMANOID_SIMULATOR_WF_TRON1A_NODE
 #define CRL_HUMANOID_SIMULATOR_WF_TRON1A_NODE
 
@@ -60,7 +55,7 @@ namespace crl::humanoid::simulator {
             this->declare_parameter("elastic_band_stiffness", 500.0);
             this->declare_parameter("elastic_band_damping", 100.0);
             this->declare_parameter("elastic_band_target_height", 1.45);
-            
+
             // Declare initial pose parameter (default: "upright" for original behavior, "limx_sitting" for LimX deployment pose)
             this->declare_parameter("initial_pose_mode", "upright");
 
@@ -72,7 +67,7 @@ namespace crl::humanoid::simulator {
 
             // Initialize MuJoCo
             initializeMuJoCo();
-            
+
             // Read and apply elastic band parameters from config
             bool elasticEnabled = this->get_parameter("elastic_band_enabled").as_bool();
             double elasticStiffness = this->get_parameter("elastic_band_stiffness").as_double();
@@ -572,20 +567,20 @@ namespace crl::humanoid::simulator {
 
             // Get initial pose mode parameter (default: "upright")
             std::string poseMode = this->get_parameter("initial_pose_mode").as_string();
-            
+
             // Joint order: abad_L, hip_L, knee_L, wheel_L, abad_R, hip_R, knee_R, wheel_R
             std::vector<std::string> mujocoJointOrder = {
                 "abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "wheel_L_Joint",
                 "abad_R_Joint", "hip_R_Joint", "knee_R_Joint", "wheel_R_Joint"
             };
-            
+
             if (poseMode == "limx_sitting") {
                 // LimX deployment pose: sitting with 90° forward tilt
                 // Set base position and orientation
                 mujocoData_->qpos[0] = 0.0; // x position
                 mujocoData_->qpos[1] = 0.0; // y position
                 mujocoData_->qpos[2] = 0.6; // z position (lower height for lying down pose)
-                
+
                 // Orientation: 90 degrees forward tilt (pitch rotation around y-axis)
                 // Quaternion for 90° pitch forward: w=cos(π/4), x=0, y=sin(π/4), z=0
                 const double sqrt2_inv = 0.7071067811865476; // 1/sqrt(2) = cos(π/4) = sin(π/4)
@@ -628,7 +623,7 @@ namespace crl::humanoid::simulator {
                 mujocoData_->qpos[0] = 0.0; // x position
                 mujocoData_->qpos[1] = 0.0; // y position
                 mujocoData_->qpos[2] = 0.92; // z position (standing height)
-                
+
                 // Orientation: upright (no rotation)
                 mujocoData_->qpos[3] = 1.0; // w (quaternion) - no rotation
                 mujocoData_->qpos[4] = 0.0; // x (quaternion)

@@ -7,7 +7,6 @@
     ros__parameters:
       time_step_size: 0.02
       duration: 1.0
-      loop_frequency: 500.0  # Control loop frequency for stand-up interpolation
       # Sitting pose target (matches LimX deployment initial pose)
       # target_joint_angles: [0.1541, -1.0124, 1.3613, 0.0,
       #                       -0.1541, 1.0124, -1.3613, 0.0]
@@ -19,14 +18,14 @@
       time_step_size: 0.002  # 500 Hz to match loop_frequency in deployment (1/500.0 = 0.002)
       robot_controllers_policy_file: "data/models/tron1a_stand/policy.onnx"
       robot_controllers_encoder_file: "data/models/tron1a_stand/encoder.onnx"
-      
+
       # RL-specific controller parameters
       # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
       # Control parameters
       action_scale_pos: 0.25
       decimation: 10  # Matches deployment config but not training config (was 4)
       user_torque_limit: 80.0
-      
+
       # Normalization parameters
       obs_scale_lin_vel: 2.0
       obs_scale_ang_vel: 0.25
@@ -34,18 +33,18 @@
       obs_scale_dof_vel: 0.05
       clip_actions: 100.0
       clip_observations: 100.0
-      
+
       # Model size parameters
       actions_size: 8
       observations_size: 28
       obs_history_length: 10
       encoder_output_size: 3
-      
+
       # IMU orientation offset
       imu_offset_yaw: 0.0
       imu_offset_pitch: 0.0
       imu_offset_roll: 0.0
-      
+
       # User command scales set to zero for standing
       cmd_scale_lin_vel_x: 0.0
       cmd_scale_lin_vel_y: 0.0
@@ -56,14 +55,14 @@
       time_step_size: 0.002  # 500 Hz to match loop_frequency in deployment (1/500.0 = 0.002)
       robot_controllers_policy_file: "data/models/tron1a_walk/policy.onnx"
       robot_controllers_encoder_file: "data/models/tron1a_walk/encoder.onnx"
-      
+
       # RL-specific controller parameters
       # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
       # Control parameters
       action_scale_pos: 0.25
       decimation: 10  # Matches deployment config but not training config (was 4)
       user_torque_limit: 80.0
-      
+
       # Normalization parameters
       obs_scale_lin_vel: 2.0
       obs_scale_ang_vel: 0.25
@@ -71,18 +70,18 @@
       obs_scale_dof_vel: 0.05
       clip_actions: 100.0
       clip_observations: 100.0
-      
+
       # Model size parameters
       actions_size: 8
       observations_size: 28
       obs_history_length: 10
       encoder_output_size: 3
-      
+
       # IMU orientation offset
       imu_offset_yaw: 0.0
       imu_offset_pitch: 0.0
       imu_offset_roll: 0.0
-      
+
       # User command scales
       cmd_scale_lin_vel_x: 1.5
       cmd_scale_lin_vel_y: 1.0

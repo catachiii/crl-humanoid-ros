@@ -4,22 +4,20 @@
 #include "crl_fsm/client.h"
 
 // FSM states and machines - match simulator exactly
-crl_fsm_states(States, ESTOP, SIT, STAND, WALK);
+crl_fsm_states(States, ESTOP, STAND, WALK);
 crl_fsm_machines(Machines, ONBOARD);
 
 int main(int argc, char ** argv)
 {
   // this should have the same logic as in crl_humanoid_simulator
   // transitions (keep consistent with simulator_main)
-  crl::fsm::Transition<States::ESTOP, States::SIT> t1;
-  crl::fsm::Transition<States::SIT, States::STAND> t2;
-  crl::fsm::Transition<States::SIT, States::ESTOP> t3;
-  crl::fsm::Transition<States::STAND, States::ESTOP> t4;
-  crl::fsm::Transition<States::STAND, States::WALK> t5;
-  crl::fsm::Transition<States::WALK, States::ESTOP> t6;
-  crl::fsm::Transition<States::WALK, States::SIT> t7;
+    crl::fsm::Transition<States::ESTOP, States::STAND> t1;
+    crl::fsm::Transition<States::STAND, States::ESTOP> t2;
+    crl::fsm::Transition<States::STAND, States::WALK> t3;
+    crl::fsm::Transition<States::WALK, States::ESTOP> t4;
+    crl::fsm::Transition<States::WALK, States::STAND> t5;
 
-  constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5, t6, t7);
+  constexpr auto t_cols = crl::fsm::make_transitions_collection<States>(t1, t2, t3, t4, t5);
 
   std::array<Machines, 1> monitoring = {Machines::ONBOARD};
 

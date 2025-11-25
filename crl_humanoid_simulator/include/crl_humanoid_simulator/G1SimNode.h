@@ -1,8 +1,3 @@
-//
-// Created by Dongho Kang on 22.01.22.
-// Adapted to use MuJoCo instead of ODE
-//
-
 #ifndef CRL_HUMANOID_SIMULATOR_G1_NODE
 #define CRL_HUMANOID_SIMULATOR_G1_NODE
 

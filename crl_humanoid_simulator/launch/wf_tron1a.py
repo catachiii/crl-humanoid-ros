@@ -3,6 +3,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
     monitor_config = os.path.join(
         get_package_share_directory("crl_humanoid_monitor"),
@@ -31,7 +32,7 @@ def generate_launch_description():
             parameters=[
                 monitor_config,
                 {'model': 'wf_tron1a',
-                'robot_xml_file': 'wf_tron1a_description/xml/scene_crl.xml'}
+                 'robot_xml_file': 'wf_tron1a_description/xml/scene_crl.xml'}
             ],
             remappings=[('monitor_joystick', 'remote')]
         )

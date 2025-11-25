@@ -4,7 +4,7 @@
   <name>crl_humanoid_commons</name>
   <version>0.8.0</version>
   <description>ROS package for humanoid robots.</description>
-  <maintainer email="kangd@inf.ethz.ch">Dongho Kang</maintainer>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
   <license>ETH Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

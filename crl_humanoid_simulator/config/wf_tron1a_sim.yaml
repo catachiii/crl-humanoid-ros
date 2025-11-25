@@ -3,16 +3,15 @@
     ros__parameters:
       time_step_size: 0.02
 
-  sit:
-    ros__parameters:
-      time_step_size: 0.02
-      duration: 1.0
-      loop_frequency: 500.0  # Control loop frequency for stand-up interpolation
-      # Sitting pose target (matches LimX deployment initial pose)
-      # target_joint_angles: [0.1541, -1.0124, 1.3613, 0.0,
-      #                       -0.1541, 1.0124, -1.3613, 0.0]
-      target_joint_angles: [0.1541, 0.0, 1.3613, 0.0,
-                            -0.1541, 0.0, -1.3613, 0.0]
+  # sit:
+  #   ros__parameters:
+  #     time_step_size: 0.02
+  #     duration: 1.0
+  #     # Sitting pose target (matches LimX deployment initial pose)
+  #     # target_joint_angles: [0.1541, -1.0124, 1.3613, 0.0,
+  #     #                       -0.1541, 1.0124, -1.3613, 0.0]
+  #     target_joint_angles: [0.1541, 0.0, 1.3613, 0.0,
+  #                           -0.1541, 0.0, -1.3613, 0.0]
 
   stand:
     ros__parameters:
@@ -31,5 +30,5 @@
 
   robot:
     ros__parameters:
-      time_step_size: 0.001667  # sim rate
+      time_step_size: 0.002  # sim rate
       robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"
