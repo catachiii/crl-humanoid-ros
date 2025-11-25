@@ -31,10 +31,6 @@ def generate_launch_description():
             executable='monitor',
             parameters=[
                 monitor_config,
-                {
-                    'model': 'g1',
-                    'robot_xml_file': 'g1_description/scene_crl.xml'
-                }
             ],
             remappings=[
                 ('monitor_joystick', 'remote')

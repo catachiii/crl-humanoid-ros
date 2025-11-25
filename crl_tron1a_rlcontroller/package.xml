@@ -14,11 +14,9 @@
   <depend>crl_ros_helper</depend>
   <build_depend>crl_humanoid_simulator</build_depend>
   <exec_depend>crl_humanoid_simulator</exec_depend>
-  <build_depend>crl_g1_rlcontroller</build_depend>
-  <exec_depend>crl_g1_rlcontroller</exec_depend>
-
-  <!-- If you link ONNX Runtime, add a find_package or vendor package and declare it here -->
-  <!-- <depend>onnxruntime</depend> -->
+  <depend>crl_humanoid_hardware</depend>
+  <depend>crl_humanoid_monitor</depend>
+  <depend>onnxruntime</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

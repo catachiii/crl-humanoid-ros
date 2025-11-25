@@ -30,9 +30,7 @@ def generate_launch_description():
             namespace='wf_tron1a_sim',
             executable='monitor',
             parameters=[
-                monitor_config,
-                {'model': 'wf_tron1a',
-                 'robot_xml_file': 'wf_tron1a_description/xml/scene_crl.xml'}
+                monitor_config
             ],
             remappings=[('monitor_joystick', 'remote')]
         )

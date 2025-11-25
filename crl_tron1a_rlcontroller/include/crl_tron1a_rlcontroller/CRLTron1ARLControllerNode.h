@@ -1,5 +1,5 @@
-#ifndef CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
-#define CRL_G1_RLCONTROLLER_CONTROLLERNODE_H
+#ifndef CRL_TRON1A_RLCONTROLLER_CONTROLLERNODE_H
+#define CRL_TRON1A_RLCONTROLLER_CONTROLLERNODE_H
 
 #include <string>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
@@ -21,8 +21,6 @@ namespace crl::tron1a::rlcontroller {
             auto paramDesc = rcl_interfaces::msg::ParameterDescriptor{};
             paramDesc.description = "Tron1a RL controller parameters.";
             paramDesc.read_only = true;
-            // Optional params for direct ONNX model loading (Wheelfoot-style)
-            // Required now: we do not support JSON fallback in this node
             if (!this->has_parameter("robot_controllers_policy_file")) {
                 this->template declare_parameter<std::string>("robot_controllers_policy_file", "");
             }

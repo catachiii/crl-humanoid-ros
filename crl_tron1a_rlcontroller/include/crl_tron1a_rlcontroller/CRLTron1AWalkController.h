@@ -10,7 +10,7 @@
 #include <vector>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
-#include <onnxruntime_cxx_api.h>
+#include <onnxruntime/onnxruntime_cxx_api.h>
 #include <rclcpp/rclcpp.hpp>
 #include <crl-basic/utils/mathDefs.h>
 #include "crl_humanoid_commons/nodes/ControllerNode.h"
@@ -96,7 +96,7 @@ namespace crl::tron1a::rlcontroller {
         std::vector<robot_controllers::tensor_element_t> observations_;
         std::vector<robot_controllers::tensor_element_t> proprioHistoryVector_;
         Eigen::Matrix<robot_controllers::tensor_element_t, Eigen::Dynamic, 1> proprioHistoryBuffer_;
-        
+
         int numObs_;
         int numActions_;
         int numHistory_;
@@ -104,7 +104,7 @@ namespace crl::tron1a::rlcontroller {
         int obsHistoryLength_;
         int encoderInputSize_;
         int encoderOutputSize_;
-        
+
         crl::dVector defaultJointPos_;
         crl::dVector initJointAngles_;
         crl::dVector actionScale_;
@@ -120,7 +120,6 @@ namespace crl::tron1a::rlcontroller {
             double stiffness{0.0};
             double damping{0.0};
             double action_scale_pos{0.0};
-            int decimation{0};
             double user_torque_limit{0.0};
         } controlCfg_;
 
@@ -150,8 +149,24 @@ namespace crl::tron1a::rlcontroller {
 
         // onnx
         Ort::Env env_;
+        Ort::MemoryInfo memoryInfo_;
         Ort::Session session_{nullptr};  // Policy session
         std::unique_ptr<Ort::Session> encoderSessionPtr_{nullptr};  // Encoder session
+
+        // Pre-allocated tensors and buffers
+        std::vector<Ort::Value> encoderInputTensors_;
+        std::vector<Ort::Value> encoderOutputTensors_;
+        std::vector<Ort::Value> policyInputTensors_;
+        std::vector<Ort::Value> policyOutputTensors_;
+
+        std::vector<robot_controllers::tensor_element_t> combinedObs_; // Buffer for policy input
+
+        // C-string arrays for ONNX Run
+        std::vector<const char*> encoderInputNamesCStr_;
+        std::vector<const char*> encoderOutputNamesCStr_;
+        std::vector<const char*> policyInputNamesCStr_;
+        std::vector<const char*> policyOutputNamesCStr_;
+
         Ort::Value inputTensor_{nullptr};
         Ort::Value outputTensor_{nullptr};
         std::vector<robot_controllers::tensor_element_t> inputData_;
@@ -161,14 +176,13 @@ namespace crl::tron1a::rlcontroller {
         std::array<int64_t, 2> outputShape_;
         std::vector<std::vector<int64_t>> encoderInputShapes_;
         std::vector<std::vector<int64_t>> encoderOutputShapes_;
-        std::vector<const char*> encoderInputNames_;
-        std::vector<const char*> encoderOutputNames_;
-        std::vector<const char*> policyInputNames_;
-        std::vector<const char*> policyOutputNames_;
+        std::vector<std::string> encoderInputNames_;
+        std::vector<std::string> encoderOutputNames_;
+        std::vector<std::string> policyInputNames_;
+        std::vector<std::string> policyOutputNames_;
 
         // Timing and control
         double timer = 0.0;
-        int64_t loopCount_{0};
         bool isfirstRecObs_{true};
 
     };

@@ -19,23 +19,32 @@ find_package(crl_fsm REQUIRED)
 find_package(crl_ros_helper REQUIRED)
 find_package(crl_humanoid_simulator REQUIRED)
 find_package(crl_humanoid_hardware REQUIRED)
-find_package(crl_g1_rlcontroller REQUIRED)
-# find_package(onnxruntime REQUIRED) # if you plan to link to it
+find_package(crl_humanoid_monitor REQUIRED)
+find_package(onnxruntime 1.15.0 EXACT REQUIRED)
+
+# OpenGL dependencies for monitor
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
+
+# MuJoCo dependency - set paths manually
+set(MUJOCO_INCLUDE_DIRS /opt/mujoco/include)
+set(MUJOCO_LIBRARY_DIRS /opt/mujoco/lib)
+set(MUJOCO_LIBRARIES mujoco)
 
 include_directories(include)
 
 # Executables
-add_executable(simulator_main 
+add_executable(simulator_main
     src/simulator_main.cpp
     src/CRLTron1AWalkController.cpp
 )
-ament_target_dependencies(simulator_main 
-    rclcpp 
-    crl_humanoid_commons 
-    crl_fsm 
+ament_target_dependencies(simulator_main
+    rclcpp
+    crl_humanoid_commons
+    crl_fsm
     crl_ros_helper
     crl_humanoid_simulator
-    crl_g1_rlcontroller
+    onnxruntime
     ament_index_cpp
 )
 
@@ -48,31 +57,54 @@ add_executable(hardware_main
     src/hardware_main.cpp
     src/CRLTron1AWalkController.cpp
 )
-ament_target_dependencies(hardware_main 
-    rclcpp 
-    crl_humanoid_commons 
-    crl_fsm 
+ament_target_dependencies(hardware_main
+    rclcpp
+    crl_humanoid_commons
+    crl_fsm
     crl_ros_helper
     crl_humanoid_simulator
     crl_humanoid_hardware
-    crl_g1_rlcontroller
+    onnxruntime
     ament_index_cpp
 )
 target_link_libraries(hardware_main Eigen3::Eigen)
 
-# If you add a monitor_main later, enable this:
-# add_executable(monitor_main src/monitor_main.cpp)
-# ament_target_dependencies(monitor_main rclcpp crl_humanoid_commons crl_fsm crl_ros_helper)
+# Monitor executable
+add_executable(monitor_main src/monitor_main.cpp)
+
+target_include_directories(monitor_main PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${MUJOCO_INCLUDE_DIRS}
+)
+
+target_link_directories(monitor_main PRIVATE
+    ${MUJOCO_LIBRARY_DIRS}
+)
+
+# Link libraries for monitor
+target_link_libraries(monitor_main
+    ${MUJOCO_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    glfw
+)
+
+ament_target_dependencies(monitor_main
+    rclcpp
+    crl_humanoid_commons
+    crl_humanoid_monitor
+    crl_fsm
+    crl_ros_helper
+)
 
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
-install(DIRECTORY data DESTINATION share/${PROJECT_NAME} OPTIONAL)
+install(DIRECTORY data DESTINATION share/${PROJECT_NAME})
 
 install(TARGETS
   simulator_main
   hardware_main
-  # monitor_main
+  monitor_main
   DESTINATION lib/${PROJECT_NAME}
 )
 

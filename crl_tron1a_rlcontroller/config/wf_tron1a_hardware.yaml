@@ -15,16 +15,16 @@
 
   stand:
     ros__parameters:
-      time_step_size: 0.002  # 500 Hz to match loop_frequency in deployment (1/500.0 = 0.002)
-      robot_controllers_policy_file: "/home/nathan_lacour/CRL_Humanoid/src/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_stand/policy.onnx"
-      robot_controllers_encoder_file: "/home/nathan_lacour/CRL_Humanoid/src/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_stand/encoder.onnx"
+      time_step_size: 0.02  # 50 Hz
+      rl_type: "isaacgym"
+      robot_controllers_policy_file: "data/models/tron1a_stand/policy.onnx"
+      robot_controllers_encoder_file: "data/models/tron1a_stand/encoder.onnx"
 
 
       # RL-specific controller parameters
       # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
       # Control parameters
       action_scale_pos: 0.25
-      decimation: 10  # Matches deployment config but not training config (was 4)
       user_torque_limit: 80.0
 
       # Normalization parameters
@@ -40,11 +40,6 @@
       observations_size: 28
       obs_history_length: 10
       encoder_output_size: 3
-
-      # IMU orientation offset
-      imu_offset_yaw: 0.0
-      imu_offset_pitch: 0.0
-      imu_offset_roll: 0.0
 
       # User command scales set to zero for standing
       cmd_scale_lin_vel_x: 0.0
@@ -53,15 +48,15 @@
 
   walk:
     ros__parameters:
-      time_step_size: 0.002  # 500 Hz to match loop_frequency in deployment (1/500.0 = 0.002)
-      robot_controllers_policy_file: "/home/nathan_lacour/CRL_Humanoid/src/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_walk/policy.onnx"
-      robot_controllers_encoder_file: "/home/nathan_lacour/CRL_Humanoid/src/crl-humanoid-ros/crl_tron1a_rlcontroller/data/models/tron1a_walk/encoder.onnx"
+      time_step_size: 0.02  # 50 Hz
+      rl_type: "isaacgym"
+      robot_controllers_policy_file: "data/models/tron1a_walk/policy.onnx"
+      robot_controllers_encoder_file: "data/models/tron1a_walk/encoder.onnx"
 
       # RL-specific controller parameters
       # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
       # Control parameters
       action_scale_pos: 0.25
-      decimation: 10  # Matches deployment config but not training config (was 4)
       user_torque_limit: 80.0
 
       # Normalization parameters
@@ -77,11 +72,6 @@
       observations_size: 28
       obs_history_length: 10
       encoder_output_size: 3
-
-      # IMU orientation offset
-      imu_offset_yaw: 0.0
-      imu_offset_pitch: 0.0
-      imu_offset_roll: 0.0
 
       # User command scales
       cmd_scale_lin_vel_x: 1.5
