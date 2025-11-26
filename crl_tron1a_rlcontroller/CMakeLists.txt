@@ -31,6 +31,13 @@ set(MUJOCO_INCLUDE_DIRS /opt/mujoco/include)
 set(MUJOCO_LIBRARY_DIRS /opt/mujoco/lib)
 set(MUJOCO_LIBRARIES mujoco)
 
+# data folder path
+set(
+        CRL_TRON1A_RLCONTROLLER_DATA_FOLDER
+        "\"${CMAKE_CURRENT_LIST_DIR}/data\""
+        CACHE STRING ""
+)
+
 include_directories(include)
 
 # Executables
@@ -47,6 +54,8 @@ ament_target_dependencies(simulator_main
     onnxruntime
     ament_index_cpp
 )
+
+target_compile_definitions(simulator_main PUBLIC "CRL_TRON1A_RLCONTROLLER_DATA_FOLDER=${CRL_TRON1A_RLCONTROLLER_DATA_FOLDER}")
 
 # Find and link Eigen3 (required for CRLTron1AWalkController)
 find_package(Eigen3 REQUIRED)
@@ -67,6 +76,7 @@ ament_target_dependencies(hardware_main
     onnxruntime
     ament_index_cpp
 )
+target_compile_definitions(hardware_main PUBLIC "CRL_TRON1A_RLCONTROLLER_DATA_FOLDER=${CRL_TRON1A_RLCONTROLLER_DATA_FOLDER}")
 target_link_libraries(hardware_main Eigen3::Eigen)
 
 # Monitor executable

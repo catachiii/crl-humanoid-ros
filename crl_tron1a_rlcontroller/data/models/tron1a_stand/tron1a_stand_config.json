@@ -1,0 +1,29 @@
+{
+  "rl_type": "isaacgym",
+  "policy_model": "policy.onnx",
+  "encoder_model": "encoder.onnx",
+  "action_scale_pos": 0.25,
+  "user_torque_limit": 80.0,
+  "obs_scales": {
+    "lin_vel": 2.0,
+    "ang_vel": 0.25,
+    "dof_pos": 1.0,
+    "dof_vel": 0.05
+  },
+  "clip_actions": 100.0,
+  "clip_observations": 100.0,
+  "actions_size": 8,
+  "observations_size": 28,
+  "obs_history_length": 10,
+  "encoder_output_size": 3,
+  "imu_offset": {
+    "roll": 0.0,
+    "pitch": 0.0,
+    "yaw": 0.0
+  },
+  "cmd_scales": {
+    "lin_vel_x": 0.0,
+    "lin_vel_y": 0.0,
+    "ang_vel_yaw": 0.0
+  }
+}

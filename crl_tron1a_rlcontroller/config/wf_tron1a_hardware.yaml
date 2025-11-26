@@ -16,67 +16,12 @@
   stand:
     ros__parameters:
       time_step_size: 0.02  # 50 Hz
-      rl_type: "isaacgym"
-      robot_controllers_policy_file: "data/models/tron1a_stand/policy.onnx"
-      robot_controllers_encoder_file: "data/models/tron1a_stand/encoder.onnx"
-
-
-      # RL-specific controller parameters
-      # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
-      # Control parameters
-      action_scale_pos: 0.25
-      user_torque_limit: 80.0
-
-      # Normalization parameters
-      obs_scale_lin_vel: 2.0
-      obs_scale_ang_vel: 0.25
-      obs_scale_dof_pos: 1.0
-      obs_scale_dof_vel: 0.05
-      clip_actions: 100.0
-      clip_observations: 100.0
-
-      # Model size parameters
-      actions_size: 8
-      observations_size: 28
-      obs_history_length: 10
-      encoder_output_size: 3
-
-      # User command scales set to zero for standing
-      cmd_scale_lin_vel_x: 0.0
-      cmd_scale_lin_vel_y: 0.0
-      cmd_scale_ang_vel_yaw: 0.0
+      config_file: "data/models/tron1a_stand/tron1a_stand_config.json"
 
   walk:
     ros__parameters:
       time_step_size: 0.02  # 50 Hz
-      rl_type: "isaacgym"
-      robot_controllers_policy_file: "data/models/tron1a_walk/policy.onnx"
-      robot_controllers_encoder_file: "data/models/tron1a_walk/encoder.onnx"
-
-      # RL-specific controller parameters
-      # Note: Default joint angles, stiffness, damping, and wheel joint parameters are set directly from RobotParameters.h
-      # Control parameters
-      action_scale_pos: 0.25
-      user_torque_limit: 80.0
-
-      # Normalization parameters
-      obs_scale_lin_vel: 2.0
-      obs_scale_ang_vel: 0.25
-      obs_scale_dof_pos: 1.0
-      obs_scale_dof_vel: 0.05
-      clip_actions: 100.0
-      clip_observations: 100.0
-
-      # Model size parameters
-      actions_size: 8
-      observations_size: 28
-      obs_history_length: 10
-      encoder_output_size: 3
-
-      # User command scales
-      cmd_scale_lin_vel_x: 1.5
-      cmd_scale_lin_vel_y: 1.0
-      cmd_scale_ang_vel_yaw: 0.5
+      config_file: "data/models/tron1a_walk/tron1a_walk_config.json"
 
   comm:
     ros__parameters:
@@ -90,10 +35,10 @@
       robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"
       robot_ip_address: "127.0.0.1"  # For simulation use "127.0.0.1", for real robot use "10.192.1.2" or robot's IP
 
-      joystick_max_forward_velocity: 4.0   # Maximum forward walking speed
-      joystick_max_backward_velocity: 4.0  # Maximum backward walking speed
-      joystick_max_sideways_velocity: 0.8  # Maximum sideways walking speed
-      joystick_max_turning_velocity: 1.0   # Maximum turning speed
+      joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
+      joystick_max_backward_velocity: 1.5  # Maximum backward walking speed
+      joystick_max_sideways_velocity: 1.0  # Maximum sideways walking speed
+      joystick_max_turning_velocity: 0.5   # Maximum turning speed
 
       keybinding_modifier: "L1"    # Modifier button to hold
 
@@ -103,7 +48,7 @@
       # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
       state_keybindings:
         states: ["ESTOP", "SIT", "STAND", "WALK"]  # State names (must match enum in main.cpp)
-        keys:   ["B",     "A",     "X" , "Y"]     # Corresponding keys for each state
+        keys:   ["B",     "A",     "X" ,     "Y"]     # Corresponding keys for each state
 
       # Elastic band parameters (adjust target_height to lower the band)
       elastic_band_enabled: true

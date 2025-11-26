@@ -2,6 +2,8 @@
 
 #include <crl-basic/utils/mathDefs.h>
 #include <onnxruntime/onnxruntime_cxx_api.h>
+#include <nlohmann/json.hpp>
+#include <fstream>
 
 #include <algorithm>
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -13,6 +15,50 @@
 #include <string>
 #include <unordered_set>
 
+namespace {
+template <typename T>
+constexpr T square(T value) {
+    return value * value;
+}
+
+template <typename SCALAR_T>
+Eigen::Matrix<SCALAR_T, 3, 1> quatToZyx(const Eigen::Quaternion<SCALAR_T> &q) {
+    Eigen::Matrix<SCALAR_T, 3, 1> zyx;
+
+    SCALAR_T as = std::min(static_cast<SCALAR_T>(-2.) * (q.x() * q.z() - q.w() * q.y()), static_cast<SCALAR_T>(.99999));
+    zyx(0) = std::atan2(static_cast<SCALAR_T>(2) * (q.x() * q.y() + q.w() * q.z()),
+                        square(q.w()) + square(q.x()) - square(q.y()) - square(q.z()));
+    zyx(1) = std::asin(as);
+    zyx(2) = std::atan2(static_cast<SCALAR_T>(2) * (q.y() * q.z() + q.w() * q.x()),
+                        square(q.w()) - square(q.x()) - square(q.y()) + square(q.z()));
+    return zyx;
+}
+
+template <typename SCALAR_T>
+Eigen::Matrix<SCALAR_T, 3, 3> getRotationMatrixFromZyxEulerAngles(
+    const Eigen::Matrix<SCALAR_T, 3, 1> &eulerAngles) {
+    const SCALAR_T z = eulerAngles(0);
+    const SCALAR_T y = eulerAngles(1);
+    const SCALAR_T x = eulerAngles(2);
+
+    const SCALAR_T c1 = std::cos(z);
+    const SCALAR_T c2 = std::cos(y);
+    const SCALAR_T c3 = std::cos(x);
+    const SCALAR_T s1 = std::sin(z);
+    const SCALAR_T s2 = std::sin(y);
+    const SCALAR_T s3 = std::sin(x);
+
+    const SCALAR_T s2s3 = s2 * s3;
+    const SCALAR_T s2c3 = s2 * c3;
+
+    Eigen::Matrix<SCALAR_T, 3, 3> rotationMatrix;
+    rotationMatrix << c1 * c2,      c1 * s2s3 - s1 * c3,       c1 * s2c3 + s1 * s3,
+                      s1 * c2,      s1 * s2s3 + c1 * c3,       s1 * s2c3 - c1 * s3,
+                      -s2,          c2 * s3,                   c2 * c3;
+    return rotationMatrix;
+}
+}
+
 namespace crl::tron1a::rlcontroller {
 
     CRLTron1AWalkController::CRLTron1AWalkController(const std::shared_ptr<crl::humanoid::commons::RobotModel>& model,
@@ -23,56 +69,128 @@ namespace crl::tron1a::rlcontroller {
         isfirstRecObs_ = true;
     }
 
-    bool CRLTron1AWalkController::loadModelFromParams(rclcpp::Node& node) {
-        // Load configuration first
-        if (!loadRLCfg(node)) {
-            RCLCPP_ERROR(logger_, "Failed to load RL configuration");
-            return false;
+    bool CRLTron1AWalkController::loadModelFromParams(const std::string &fileName) {
+        // Set default joint angles from RobotModel
+        crl::resize(initJointAngles_, model_->jointNames.size());
+        for (size_t i = 0; i < model_->jointNames.size(); i++) {
+            initJointAngles_[i] = model_->defaultJointConf[i];
         }
 
-        std::string policyModelPathParam;
-        std::string encoderModelPathParam;
-
-        if (!node.get_parameter("robot_controllers_policy_file", policyModelPathParam)) {
-            RCLCPP_ERROR(logger_, "Failed to retrieve policy path from the parameter server!");
-            return false;
-        }
-        // encoder is mandatory
-        if (!node.get_parameter("robot_controllers_encoder_file", encoderModelPathParam) || encoderModelPathParam.empty()) {
-            RCLCPP_ERROR(logger_, "Failed to retrieve encoder path from the parameter server! Encoder is required.");
-            return false;
-        }
-
-        std::string packageShareDir;
-        auto resolveModelPath = [&](const std::string& paramValue, std::filesystem::path& outPath) -> bool {
-            std::filesystem::path candidate(paramValue);
-            if (candidate.is_absolute()) {
-                outPath = candidate;
-                return true;
+        // Find wheel joint indices by name
+        wheel_L_idx_ = -1;
+        wheel_R_idx_ = -1;
+        for (size_t i = 0; i < model_->jointNames.size(); i++) {
+            if (model_->jointNames[i] == "wheel_L_Joint") {
+                wheel_L_idx_ = static_cast<int>(i);
+            } else if (model_->jointNames[i] == "wheel_R_Joint") {
+                wheel_R_idx_ = static_cast<int>(i);
             }
+        }
+        if (wheel_L_idx_ < 0 || wheel_R_idx_ < 0) {
+            RCLCPP_ERROR(logger_, "Failed to find wheel joint indices! wheel_L_idx_=%d, wheel_R_idx_=%d", wheel_L_idx_, wheel_R_idx_);
+            return false;
+        }
 
-            if (packageShareDir.empty()) {
-                try {
-                    packageShareDir = ament_index_cpp::get_package_share_directory("crl_tron1a_rlcontroller");
-                } catch (const std::exception& e) {
-                    RCLCPP_ERROR(logger_, "Failed to locate package share directory: %s", e.what());
-                    return false;
-                }
-            }
-            outPath = std::filesystem::path(packageShareDir) / candidate;
-            return true;
-        };
-
+        std::filesystem::path configPath(fileName);
         std::filesystem::path policyModelPath;
         std::filesystem::path encoderModelPath;
-        if (!resolveModelPath(policyModelPathParam, policyModelPath) || !resolveModelPath(encoderModelPathParam, encoderModelPath)) {
-            return false;
-        }
-        const std::string policyModelPathStr = policyModelPath.string();
-        const std::string encoderModelPathStr = encoderModelPath.string();
 
-        // Create session options similar to WheelfootController
-        Ort::SessionOptions sessionOptions;
+        try {
+                std::ifstream file(configPath);
+                if (file.fail()) {
+                    RCLCPP_ERROR(logger_, "Failed to load RL policy configuration file: %s", configPath.c_str());
+                    return false;
+                }
+                const auto &conf = nlohmann::json::parse(file);
+
+                std::string rl_type = conf.value("rl_type", "isaacgym");
+
+                int firstNonWheelIdx = (wheel_L_idx_ == 0) ? 1 : 0;
+                controlCfg_.stiffness = model_->jointStiffnessDefault[firstNonWheelIdx];
+                controlCfg_.damping = model_->jointDampingDefault[firstNonWheelIdx];
+                wheelJointDamping_ = model_->jointDampingDefault[wheel_L_idx_];
+                wheelJointTorqueLimit_ = model_->jointTorqueMax[wheel_L_idx_];
+
+                // RL-specific control parameters
+                controlCfg_.action_scale_pos = conf.value("action_scale_pos", 0.25);
+                controlCfg_.user_torque_limit = conf.value("user_torque_limit", 80.0);
+
+                // Normalization parameters (RL-specific)
+                auto obsScales = conf["obs_scales"];
+                obsScales_.linVel = obsScales.value("lin_vel", 2.0);
+                obsScales_.angVel = obsScales.value("ang_vel", 0.25);
+                obsScales_.dofPos = obsScales.value("dof_pos", 1.0);
+                obsScales_.dofVel = obsScales.value("dof_vel", 0.05);
+
+                clipActions_ = conf.value("clip_actions", 100.0);
+                clipObs_ = conf.value("clip_observations", 100.0);
+
+                // Model size parameters (RL-specific)
+                numActions_ = conf.value("actions_size", 8);
+                observationSize_ = conf.value("observations_size", 28);
+                obsHistoryLength_ = conf.value("obs_history_length", 10);
+                encoderOutputSize_ = conf.value("encoder_output_size", 3);
+
+                // IMU orientation offset (calibration parameter)
+                auto imuOffset = conf["imu_offset"];
+                imuOrientationOffset_[0] = imuOffset.value("yaw", 0.0);
+                imuOrientationOffset_[1] = imuOffset.value("pitch", 0.0);
+                imuOrientationOffset_[2] = imuOffset.value("roll", 0.0);
+
+                // User command scales (RL-specific)
+                auto cmdScales = conf["cmd_scales"];
+                userCmdCfg_.linVel_x = cmdScales.value("lin_vel_x", 1.5);
+                userCmdCfg_.linVel_y = cmdScales.value("lin_vel_y", 1.0);
+                userCmdCfg_.angVel_yaw = cmdScales.value("ang_vel_yaw", 0.5);
+
+                jointPosIdxs_.clear();
+                std::vector<std::string> targetJointNames;
+
+                if (rl_type == "isaacgym") {
+                    // isaacgym order: [abad_L, hip_L, knee_L, abad_R, hip_R, knee_R]
+                    targetJointNames = {"abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "abad_R_Joint", "hip_R_Joint", "knee_R_Joint"};
+                    RCLCPP_INFO(logger_, "Using isaacgym joint order target");
+                } else {
+                    // isaaclab order: [abad_L, abad_R, hip_L, hip_R, knee_L, knee_R]
+                    targetJointNames = {"abad_L_Joint", "abad_R_Joint", "hip_L_Joint", "hip_R_Joint", "knee_L_Joint", "knee_R_Joint"};
+                    RCLCPP_INFO(logger_, "Using isaaclab joint order target");
+                }
+
+                for (const auto& name : targetJointNames) {
+                    bool found = false;
+                    for (size_t i = 0; i < model_->jointNames.size(); i++) {
+                        if (model_->jointNames[i] == name) {
+                            jointPosIdxs_.push_back(static_cast<int>(i));
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        RCLCPP_ERROR(logger_, "Failed to find joint %s in robot model", name.c_str());
+                        return false;
+                    }
+                }
+
+                encoderInputSize_ = obsHistoryLength_ * observationSize_;
+                numObs_ = observationSize_;
+
+                std::string policyModelName = conf.value("policy_model", "policy.onnx");
+                std::string encoderModelName = conf.value("encoder_model", "encoder.onnx");
+
+                std::filesystem::path configDir = configPath.parent_path();
+                policyModelPath = configDir / policyModelName;
+                encoderModelPath = configDir / encoderModelName;
+
+            } catch (const std::exception& e) {
+                RCLCPP_ERROR(logger_, "Error loading RL configuration: %s", e.what());
+                return false;
+            }
+
+            const std::string policyModelPathStr = policyModelPath.string();
+            const std::string encoderModelPathStr = encoderModelPath.string();
+
+            // Create session options similar to WheelfootController
+            Ort::SessionOptions sessionOptions;
         sessionOptions.SetIntraOpNumThreads(1);
         sessionOptions.SetInterOpNumThreads(1);
 
@@ -141,22 +259,24 @@ namespace crl::tron1a::rlcontroller {
         proprioHistoryVector_.resize(obsHistoryLength_ * observationSize_);
         obsHistory_.resize(numHistory_);
 
-        // Resize crl::dVector types (crl::utils::resize also zeros them)
-        crl::utils::resize(action_, numActions_);
-        crl::utils::resize(lastActions_, numActions_);
-        crl::utils::resize(currentObs_, numObs_);
+        // Resize crl::dVector types (crl::resize also zeros them)
+        crl::resize(action_, numActions_);
+        crl::resize(lastActions_, numActions_);
+        crl::resize(currentObs_, numObs_);
         for (int i = 0; i < numHistory_; i++) {
-            crl::utils::resize(obsHistory_[i], numObs_);
+            crl::resize(obsHistory_[i], numObs_);
         }
 
-        // Initialize Eigen vectors to zero
+        crl::resize(commands_, 3);
+        crl::resize(scaled_commands_, 3);
         commands_.setZero();
         scaled_commands_.setZero();
 
         // Resize buffers
         int64_t inputSize = obsHistoryLength_ * observationSize_;
-        proprioHistoryBuffer_.resize(inputSize);
+        crl::resize(proprioHistoryBuffer_, inputSize);
         proprioHistoryBuffer_.setZero();
+        encoderInputData_.resize(inputSize);
 
         combinedObs_.resize(encoderOutputSize_ + observationSize_ + 3); // 3 for scaled_commands
         outputData_.resize(numActions_);
@@ -179,8 +299,8 @@ namespace crl::tron1a::rlcontroller {
             if (encInputShape[0] == -1) encInputShape[0] = 1;
 
             encoderInputTensors_.clear();
-            encoderInputTensors_.push_back(Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(
-                memoryInfo_, proprioHistoryBuffer_.data(), proprioHistoryBuffer_.size(), encInputShape.data(), encInputShape.size()));
+            encoderInputTensors_.push_back(Ort::Value::CreateTensor<float>(
+                memoryInfo_, encoderInputData_.data(), encoderInputData_.size(), encInputShape.data(), encInputShape.size()));
         }
 
         // Encoder Output
@@ -189,7 +309,7 @@ namespace crl::tron1a::rlcontroller {
             if (encOutputShape[0] == -1) encOutputShape[0] = 1;
 
             encoderOutputTensors_.clear();
-            encoderOutputTensors_.push_back(Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(
+            encoderOutputTensors_.push_back(Ort::Value::CreateTensor<float>(
                 memoryInfo_, encoderOut_.data(), encoderOut_.size(), encOutputShape.data(), encOutputShape.size()));
         }
 
@@ -199,7 +319,7 @@ namespace crl::tron1a::rlcontroller {
         if (polInputShape[0] == -1) polInputShape[0] = 1;
 
         policyInputTensors_.clear();
-        policyInputTensors_.push_back(Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(
+        policyInputTensors_.push_back(Ort::Value::CreateTensor<float>(
             memoryInfo_, combinedObs_.data(), combinedObs_.size(), polInputShape.data(), polInputShape.size()));
 
         // Policy Output
@@ -208,283 +328,67 @@ namespace crl::tron1a::rlcontroller {
         if (polOutputShape[0] == -1) polOutputShape[0] = 1;
 
         policyOutputTensors_.clear();
-        policyOutputTensors_.push_back(Ort::Value::CreateTensor<robot_controllers::tensor_element_t>(
+        policyOutputTensors_.push_back(Ort::Value::CreateTensor<float>(
             memoryInfo_, outputData_.data(), outputData_.size(), polOutputShape.data(), polOutputShape.size()));
 
         return true;
     }
 
-    bool CRLTron1AWalkController::loadRLCfg(rclcpp::Node& node) {
-        try {
-            // Set default joint angles from RobotModel
-            crl::utils::resize(initJointAngles_, model_->jointNames.size());
-            for (size_t i = 0; i < model_->jointNames.size(); i++) {
-                initJointAngles_[i] = model_->defaultJointConf[i];
-            }
 
-            // Find wheel joint indices by name
-            wheel_L_idx_ = -1;
-            wheel_R_idx_ = -1;
-            for (size_t i = 0; i < model_->jointNames.size(); i++) {
-                if (model_->jointNames[i] == "wheel_L_Joint") {
-                    wheel_L_idx_ = static_cast<int>(i);
-                } else if (model_->jointNames[i] == "wheel_R_Joint") {
-                    wheel_R_idx_ = static_cast<int>(i);
-                }
-            }
-            if (wheel_L_idx_ < 0 || wheel_R_idx_ < 0) {
-                RCLCPP_ERROR(logger_, "Failed to find wheel joint indices! wheel_L_idx_=%d, wheel_R_idx_=%d", wheel_L_idx_, wheel_R_idx_);
-                return false;
-            }
-
-            // Verify wheel indices match expected values based on RL_TYPE (deployment compatibility)
-            std::string rl_type;
-            if (!node.has_parameter("rl_type")) {
-                node.declare_parameter<std::string>("rl_type", "isaaclab");
-            }
-            if (!node.get_parameter("rl_type", rl_type)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'rl_type'");
-                return false;
-            }
-
-            int firstNonWheelIdx = (wheel_L_idx_ == 0) ? 1 : 0;
-            controlCfg_.stiffness = model_->jointStiffnessDefault[firstNonWheelIdx];
-            controlCfg_.damping = model_->jointDampingDefault[firstNonWheelIdx];
-            wheelJointDamping_ = model_->jointDampingDefault[wheel_L_idx_];
-            wheelJointTorqueLimit_ = model_->jointTorqueMax[wheel_L_idx_];
-
-            // RL-specific control parameters
-            if (!node.has_parameter("action_scale_pos")) {
-                node.declare_parameter<double>("action_scale_pos", 0.25);
-            }
-            if (!node.has_parameter("user_torque_limit")) {
-                node.declare_parameter<double>("user_torque_limit", 80.0);
-            }
-
-            if (!node.get_parameter("action_scale_pos", controlCfg_.action_scale_pos)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'action_scale_pos'");
-                return false;
-            }
-            if (!node.get_parameter("user_torque_limit", controlCfg_.user_torque_limit)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'user_torque_limit'");
-                return false;
-            }
-
-            // Normalization parameters (RL-specific)
-            if (!node.has_parameter("obs_scale_lin_vel")) {
-                node.declare_parameter<double>("obs_scale_lin_vel", 2.0);
-            }
-            if (!node.has_parameter("obs_scale_ang_vel")) {
-                node.declare_parameter<double>("obs_scale_ang_vel", 0.25);
-            }
-            if (!node.has_parameter("obs_scale_dof_pos")) {
-                node.declare_parameter<double>("obs_scale_dof_pos", 1.0);
-            }
-            if (!node.has_parameter("obs_scale_dof_vel")) {
-                node.declare_parameter<double>("obs_scale_dof_vel", 0.05);
-            }
-            if (!node.has_parameter("clip_actions")) {
-                node.declare_parameter<double>("clip_actions", 100.0);
-            }
-            if (!node.has_parameter("clip_observations")) {
-                node.declare_parameter<double>("clip_observations", 100.0);
-            }
-
-            if (!node.get_parameter("obs_scale_lin_vel", obsScales_.linVel)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'obs_scale_lin_vel'");
-                return false;
-            }
-            if (!node.get_parameter("obs_scale_ang_vel", obsScales_.angVel)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'obs_scale_ang_vel'");
-                return false;
-            }
-            if (!node.get_parameter("obs_scale_dof_pos", obsScales_.dofPos)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'obs_scale_dof_pos'");
-                return false;
-            }
-            if (!node.get_parameter("obs_scale_dof_vel", obsScales_.dofVel)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'obs_scale_dof_vel'");
-                return false;
-            }
-            if (!node.get_parameter("clip_actions", clipActions_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'clip_actions'");
-                return false;
-            }
-            if (!node.get_parameter("clip_observations", clipObs_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'clip_observations'");
-                return false;
-            }
-
-            // Model size parameters (RL-specific)
-            if (!node.has_parameter("actions_size")) {
-                node.declare_parameter<int>("actions_size", 8);
-            }
-            if (!node.has_parameter("observations_size")) {
-                node.declare_parameter<int>("observations_size", 28);
-            }
-            if (!node.has_parameter("obs_history_length")) {
-                node.declare_parameter<int>("obs_history_length", 10);
-            }
-            if (!node.has_parameter("encoder_output_size")) {
-                node.declare_parameter<int>("encoder_output_size", 3);
-            }
-
-            if (!node.get_parameter("actions_size", numActions_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'actions_size'");
-                return false;
-            }
-            if (!node.get_parameter("observations_size", observationSize_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'observations_size'");
-                return false;
-            }
-            if (!node.get_parameter("obs_history_length", obsHistoryLength_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'obs_history_length'");
-                return false;
-            }
-            if (!node.get_parameter("encoder_output_size", encoderOutputSize_)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'encoder_output_size'");
-                return false;
-            }
-
-            // IMU orientation offset (calibration parameter)
-            if (!node.has_parameter("imu_offset_yaw")) {
-                node.declare_parameter<double>("imu_offset_yaw", 0.0);
-            }
-            if (!node.has_parameter("imu_offset_pitch")) {
-                node.declare_parameter<double>("imu_offset_pitch", 0.0);
-            }
-            if (!node.has_parameter("imu_offset_roll")) {
-                node.declare_parameter<double>("imu_offset_roll", 0.0);
-            }
-
-            if (!node.get_parameter("imu_offset_yaw", imuOrientationOffset_[0])) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'imu_offset_yaw'");
-                return false;
-            }
-            if (!node.get_parameter("imu_offset_pitch", imuOrientationOffset_[1])) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'imu_offset_pitch'");
-                return false;
-            }
-            if (!node.get_parameter("imu_offset_roll", imuOrientationOffset_[2])) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'imu_offset_roll'");
-                return false;
-            }
-
-            // User command scales (RL-specific)
-            if (!node.has_parameter("cmd_scale_lin_vel_x")) {
-                node.declare_parameter<double>("cmd_scale_lin_vel_x", 1.5);
-            }
-            if (!node.has_parameter("cmd_scale_lin_vel_y")) {
-                node.declare_parameter<double>("cmd_scale_lin_vel_y", 1.0);
-            }
-            if (!node.has_parameter("cmd_scale_ang_vel_yaw")) {
-                node.declare_parameter<double>("cmd_scale_ang_vel_yaw", 0.5);
-            }
-
-            if (!node.get_parameter("cmd_scale_lin_vel_x", userCmdCfg_.linVel_x)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'cmd_scale_lin_vel_x'");
-                return false;
-            }
-            if (!node.get_parameter("cmd_scale_lin_vel_y", userCmdCfg_.linVel_y)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'cmd_scale_lin_vel_y'");
-                return false;
-            }
-            if (!node.get_parameter("cmd_scale_ang_vel_yaw", userCmdCfg_.angVel_yaw)) {
-                RCLCPP_ERROR(logger_, "Failed to get parameter 'cmd_scale_ang_vel_yaw'");
-                return false;
-            }
-
-            jointPosIdxs_.clear();
-            std::vector<std::string> targetJointNames;
-
-            if (rl_type == "isaacgym") {
-                // isaacgym order: [abad_L, hip_L, knee_L, abad_R, hip_R, knee_R]
-                targetJointNames = {"abad_L_Joint", "hip_L_Joint", "knee_L_Joint", "abad_R_Joint", "hip_R_Joint", "knee_R_Joint"};
-                RCLCPP_INFO(logger_, "Using isaacgym joint order target");
-            } else {
-                // isaaclab order: [abad_L, abad_R, hip_L, hip_R, knee_L, knee_R]
-                targetJointNames = {"abad_L_Joint", "abad_R_Joint", "hip_L_Joint", "hip_R_Joint", "knee_L_Joint", "knee_R_Joint"};
-                RCLCPP_INFO(logger_, "Using isaaclab joint order target");
-            }
-
-            for (const auto& name : targetJointNames) {
-                bool found = false;
-                for (size_t i = 0; i < model_->jointNames.size(); i++) {
-                    if (model_->jointNames[i] == name) {
-                        jointPosIdxs_.push_back(static_cast<int>(i));
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    RCLCPP_ERROR(logger_, "Failed to find joint %s in robot model", name.c_str());
-                    return false;
-                }
-            }
-
-            encoderInputSize_ = obsHistoryLength_ * observationSize_;
-            numObs_ = observationSize_;
-            return true;
-        } catch (const std::exception& e) {
-            RCLCPP_ERROR(logger_, "Error loading RL configuration: %s", e.what());
-            return false;
-        }
-    }
 
     void CRLTron1AWalkController::computeObservation() {
         const auto& sensor = data_->getSensor();
         const auto& command = data_->getCommand();
 
         // Get IMU orientation as quaternion
-        Eigen::Quaterniond q_wi = sensor.imuOrientation;
+        crl::Quaternion q_wi = sensor.imuOrientation;
 
         // Convert quaternion to ZYX Euler angles and calculate inverse rotation matrix
-        using namespace robot_controllers;
-        vector3_t zyx = quatToZyx(q_wi);
-        matrix_t inverseRot = getRotationMatrixFromZyxEulerAngles(zyx).inverse();
+        crl::Vector3d zyx = quatToZyx(q_wi);
+        crl::Matrix inverseRot = getRotationMatrixFromZyxEulerAngles(zyx).inverse();
 
         // Define gravity vector and project it to the body frame
-        vector3_t gravityVector(0, 0, -1);
-        vector3_t projectedGravity(inverseRot * gravityVector);
+        crl::Vector3d gravityVector(0, 0, -1);
+        crl::Vector3d projectedGravity(inverseRot * gravityVector);
 
         // Get base angular velocity
-        vector3_t baseAngVel(sensor.gyroscope[0], sensor.gyroscope[1], sensor.gyroscope[2]);
+        crl::Vector3d baseAngVel(sensor.gyroscope[0], sensor.gyroscope[1], sensor.gyroscope[2]);
 
         // Apply orientation offset
-        vector3_t _zyx(imuOrientationOffset_[0], imuOrientationOffset_[1], imuOrientationOffset_[2]);
-        matrix_t rot = getRotationMatrixFromZyxEulerAngles(_zyx);
+        crl::Vector3d _zyx(imuOrientationOffset_[0], imuOrientationOffset_[1], imuOrientationOffset_[2]);
+        crl::Matrix rot = getRotationMatrixFromZyxEulerAngles(_zyx);
         baseAngVel = rot * baseAngVel;
         projectedGravity = rot * projectedGravity;
 
         // Get joint positions and velocities
-        vector_t jointPos(model_->jointNames.size());
-        vector_t jointVel(model_->jointNames.size());
+        crl::dVector jointPos(model_->jointNames.size());
+        crl::dVector jointVel(model_->jointNames.size());
         for (size_t i = 0; i < sensor.jointSensors.size(); ++i) {
             jointPos(i) = sensor.jointSensors[i].jointPos;
             jointVel(i) = sensor.jointSensors[i].jointVel;
         }
 
         // Get last actions
-        vector_t actions(numActions_);
+        crl::dVector actions(numActions_);
         for (int i = 0; i < numActions_; i++) {
             actions(i) = lastActions_[i];
         }
 
         // Scale commands
-        matrix_t commandScaler = Eigen::DiagonalMatrix<double, 3>(userCmdCfg_.linVel_x, userCmdCfg_.linVel_y, userCmdCfg_.angVel_yaw);
+        crl::Matrix commandScaler = Eigen::DiagonalMatrix<double, 3>(userCmdCfg_.linVel_x, userCmdCfg_.linVel_y, userCmdCfg_.angVel_yaw);
         commands_(0) = command.targetForwardSpeed;
         commands_(1) = command.targetSidewaysSpeed;
         commands_(2) = command.targetTurningSpeed;
-        vector3_t scaled_commands = commandScaler * commands_;
+        crl::dVector scaled_commands = commandScaler * commands_;
 
         // Build observation vector
-        vector_t jointPos_value = (jointPos - initJointAngles_) * obsScales_.dofPos;
-        vector_t jointPos_input(jointPosIdxs_.size());
+        crl::dVector jointPos_value = (jointPos - initJointAngles_) * obsScales_.dofPos;
+        crl::dVector jointPos_input(jointPosIdxs_.size());
         for (size_t i = 0; i < jointPosIdxs_.size(); i++) {
             jointPos_input(i) = jointPos_value(jointPosIdxs_[i]);
         }
 
-        vector_t obs(observationSize_);
+        crl::dVector obs(observationSize_);
         int obsIdx = 0;
 
         // Angular velocity
@@ -509,7 +413,7 @@ namespace crl::tron1a::rlcontroller {
         // Update observation history buffer
         if (isfirstRecObs_) {
             for (int i = 0; i < obsHistoryLength_; i++) {
-                proprioHistoryBuffer_.segment(i * observationSize_, observationSize_) = obs.cast<robot_controllers::tensor_element_t>();
+                proprioHistoryBuffer_.segment(i * observationSize_, observationSize_) = obs;
             }
             isfirstRecObs_ = false;
         }
@@ -517,14 +421,14 @@ namespace crl::tron1a::rlcontroller {
         // Shift history
         proprioHistoryBuffer_.head(proprioHistoryBuffer_.size() - observationSize_) =
             proprioHistoryBuffer_.tail(proprioHistoryBuffer_.size() - observationSize_);
-        proprioHistoryBuffer_.tail(observationSize_) = obs.cast<robot_controllers::tensor_element_t>();
+        proprioHistoryBuffer_.tail(observationSize_) = obs;
 
         // Update observation and scaled commands vectors (for policy input)
         for (size_t i = 0; i < obs.size(); i++) {
-            observations_[i] = static_cast<robot_controllers::tensor_element_t>(obs(i));
+            observations_[i] = static_cast<float>(obs(i));
         }
         for (size_t i = 0; i < scaled_commands.size(); i++) {
-            scaled_commands_[i] = static_cast<robot_controllers::tensor_element_t>(scaled_commands(i));
+            scaled_commands_[i] = static_cast<float>(scaled_commands(i));
         }
 
         // Clip observations after history update
@@ -532,12 +436,17 @@ namespace crl::tron1a::rlcontroller {
         double obsMax = clipObs_;
         for (auto& value : observations_) {
             double clamped = std::max(obsMin, std::min(obsMax, static_cast<double>(value)));
-            value = static_cast<robot_controllers::tensor_element_t>(clamped);
+            value = static_cast<float>(clamped);
         }
     }
 
     void CRLTron1AWalkController::computeEncoder() {
         if (!encoderSessionPtr_) return;
+
+        // Copy double buffer to float buffer for ONNX
+        for (size_t i = 0; i < proprioHistoryBuffer_.size(); i++) {
+            encoderInputData_[i] = static_cast<float>(proprioHistoryBuffer_[i]);
+        }
 
         Ort::RunOptions runOptions;
         encoderSessionPtr_->Run(runOptions, encoderInputNamesCStr_.data(), encoderInputTensors_.data(), encoderInputTensors_.size(),
@@ -587,8 +496,8 @@ namespace crl::tron1a::rlcontroller {
 
         // Get current joint positions and velocities
         const auto& sensor = data_->getSensor();
-        crl::utils::dVector jointPos(model_->jointNames.size());
-        crl::utils::dVector jointVel(model_->jointNames.size());
+        crl::dVector jointPos(model_->jointNames.size());
+        crl::dVector jointVel(model_->jointNames.size());
         for (size_t i = 0; i < sensor.jointSensors.size(); i++) {
             jointPos[i] = sensor.jointSensors[i].jointPos;
             jointVel[i] = sensor.jointSensors[i].jointVel;
@@ -625,13 +534,6 @@ namespace crl::tron1a::rlcontroller {
                 lastActions_[i] = action_[i];
             } else {
                 // Wheel joint: velocity control (match deployment WheelfootController logic exactly)
-                // Deployment code (lines 150-155):
-                //   actionMin = (jointVel(i) - wheelJointTorqueLimit_ / wheelJointDamping_)
-                //   actionMax = (jointVel(i) + wheelJointTorqueLimit_ / wheelJointDamping_)
-                //   lastActions_(i, 0) = actions_[i]
-                //   actions_[i] = std::max(actionMin / wheelJointDamping_, std::min(actionMax / wheelJointDamping_, (double)actions_[i]))
-                //   velocity_des = actions_[i] * wheelJointDamping_
-
                 // First, save the raw action to lastActions_ (before limiting)
                 lastActions_[i] = action_[i];
 
