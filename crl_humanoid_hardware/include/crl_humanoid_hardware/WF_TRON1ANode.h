@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <map>
 #include <cstdint>
+#include "realtime_tools/realtime_buffer.h"
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
@@ -30,7 +31,7 @@ namespace crl::unitree::hardware::wf_tron1a {
         float ly = 0.0f;
         float rx = 0.0f;
         float ry = 0.0f;
-        uint16_t keys = 0;
+        uint32_t keys = 0;
     };
 
     template <typename States, typename Machines, std::size_t N>
@@ -43,7 +44,7 @@ namespace crl::unitree::hardware::wf_tron1a {
         struct StateKeyBinding {
             std::string stateName;
             std::string keyName;
-            uint16_t keyConstant;
+            uint32_t keyConstant;
             States stateEnum;
         };
 
@@ -64,7 +65,7 @@ namespace crl::unitree::hardware::wf_tron1a {
                const StateNameToEnumMap& stateNameMap = {})
             : BaseRobotNode(model, data, monitoring, is_transitioning),
               isSDKInitialized_(false),
-              wheellegged_(nullptr),
+              robot_(nullptr),
               stateNameToEnumMap_(stateNameMap) {
 
             // Initialize default state mappings if none provided
@@ -73,7 +74,7 @@ namespace crl::unitree::hardware::wf_tron1a {
             }
 
             // Declare and get robot IP address parameter
-            this->declare_parameter("robot_ip_address", "127.0.0.1");  // Default: localhost for simulation
+            this->declare_parameter("robot_ip_address", "10.192.1.2");  // Default: localhost for simulation
             robotIpAddress_ = this->get_parameter("robot_ip_address").as_string();
 
             // Declare joystick velocity parameters
@@ -92,7 +93,7 @@ namespace crl::unitree::hardware::wf_tron1a {
 
             // Declare state keybindings as lists
             this->declare_parameter("state_keybindings.states", std::vector<std::string>{"ESTOP", "STAND", "WALK"});
-            this->declare_parameter("state_keybindings.keys", std::vector<std::string>{"B", "A", "X"});
+            this->declare_parameter("state_keybindings.keys", std::vector<std::string>{"Circle", "Square", "Triangle"});
 
             // Get keybinding parameters
             std::string modifier = this->get_parameter("keybinding_modifier").as_string();
@@ -104,35 +105,45 @@ namespace crl::unitree::hardware::wf_tron1a {
             // Setup joint mappings
             setupJointMappings();
 
-            // Initialize SDK
+            // Initialize SDK (this starts the communication)
+            robot_ = limxsdk::Wheellegged::getInstance();
             initializeSDK();
 
-            // Setup publishers and subscribers (initializes command structure)
-            setupCommunication();
+            // Initialize buffers BEFORE setting up subscriptions (like the example does)
+            // Note: getMotorNumber() works before init() - it returns a constant
+            int motorCount = robot_->getMotorNumber();
+            RCLCPP_INFO(this->get_logger(), "Motor count before init: %d", motorCount);
+            robotStateBuffer_.writeFromNonRT(limxsdk::RobotState(motorCount));
+            imuDataBuffer_.writeFromNonRT(limxsdk::ImuData());
+            sensorJoyBuffer_.writeFromNonRT(limxsdk::SensorJoy());
+            robot_cmd_.resize(motorCount);
+
+            // Setup subscriptions BEFORE initializing SDK
+            setupSubscriptions();
         }
 
     private:
         // Convert string to button constant
-        uint16_t stringToButtonConstant(const std::string& buttonName) {
-            if (buttonName == "R1") return 1;  //0x1
-            else if (buttonName == "L1") return 2;  //0x2
-            else if (buttonName == "start") return 4;  //0x4
-            else if (buttonName == "select") return 8;  //0x8
-            else if (buttonName == "R2") return 16;  //0x10
-            else if (buttonName == "L2") return 32;  //0x20
-            else if (buttonName == "F1") return 64;  //0x40
-            else if (buttonName == "F2") return 128;  //0x80
-            else if (buttonName == "A") return 256;  //0x100
-            else if (buttonName == "B") return 512;  //0x200
-            else if (buttonName == "X") return 1024;  //0x400
-            else if (buttonName == "Y") return 2048;  //0x800
-            else if (buttonName == "up") return 4096; //0x1000
-            else if (buttonName == "right") return 8192; //0x2000
-            else if (buttonName == "down") return 16384; //0x4000
-            else if (buttonName == "left") return 32768; //0x8000
+        uint32_t stringToButtonConstant(const std::string& buttonName) {
+            if (buttonName == "X") return 1;          // Index 0
+            else if (buttonName == "Circle") return 2;    // Index 1
+            else if (buttonName == "Square") return 4;    // Index 2
+            else if (buttonName == "Triangle") return 8;  // Index 3
+            else if (buttonName == "L1") return 16;       // Index 4
+            else if (buttonName == "R2") return 32;       // Index 5
+            else if (buttonName == "L2") return 64;       // Index 6
+            else if (buttonName == "R1") return 128;      // Index 7
+            else if (buttonName == "Select") return 256;  // Index 8
+            else if (buttonName == "Start") return 512;   // Index 9
+            else if (buttonName == "Up") return 4096;     // Index 12
+            else if (buttonName == "Down") return 8192;   // Index 13
+            else if (buttonName == "Left") return 16384;  // Index 14
+            else if (buttonName == "Right") return 32768; // Index 15
+            else if (buttonName == "Menu") return 65536;  // Index 16
+            else if (buttonName == "Back") return 131072; // Index 17
             else {
-                RCLCPP_WARN(this->get_logger(), "Unknown button name: %s, defaulting to A", buttonName.c_str());
-                return 256; // Default to A
+                RCLCPP_WARN(this->get_logger(), "Unknown button name: %s, defaulting to X", buttonName.c_str());
+                return 1; // Default to X
             }
         }
 
@@ -207,23 +218,27 @@ namespace crl::unitree::hardware::wf_tron1a {
                 auto walkIt = stateNameToEnumMap_.find("WALK");
 
                 if (estopIt != stateNameToEnumMap_.end()) {
-                    stateKeybindings_.push_back({"ESTOP", "B", stringToButtonConstant("B"), estopIt->second});
+                    stateKeybindings_.push_back({"ESTOP", "Circle", stringToButtonConstant("Circle"), estopIt->second});
                 }
                 if (standIt != stateNameToEnumMap_.end()) {
-                    stateKeybindings_.push_back({"STAND", "A", stringToButtonConstant("A"), standIt->second});
+                    stateKeybindings_.push_back({"STAND", "Square", stringToButtonConstant("Square"), standIt->second});
                 }
                 if (walkIt != stateNameToEnumMap_.end()) {
-                    stateKeybindings_.push_back({"WALK", "X", stringToButtonConstant("X"), walkIt->second});
+                    stateKeybindings_.push_back({"WALK", "Triangle", stringToButtonConstant("Triangle"), walkIt->second});
                 }
             }
 
-            RCLCPP_INFO(this->get_logger(), "Using default keybindings: ESTOP=B, STAND=A, WALK=X");
+            RCLCPP_INFO(this->get_logger(), "Using default keybindings: ESTOP=Circle, STAND=Square, WALK=Triangle");
         }
-        
+
         void initializeSDK() {
             try {
-                wheellegged_ = limxsdk::Wheellegged::getInstance();
-                isSDKInitialized_ = wheellegged_->init(robotIpAddress_);
+                if (!robot_) {
+                    RCLCPP_ERROR(this->get_logger(), "Robot instance is null");
+                    throw std::runtime_error("Robot instance is null");
+                }
+
+                isSDKInitialized_ = robot_->init(robotIpAddress_);
                 if (isSDKInitialized_) {
                     RCLCPP_INFO(this->get_logger(), "LIMX SDK initialized successfully with IP: %s", robotIpAddress_.c_str());
                 } else {
@@ -236,76 +251,44 @@ namespace crl::unitree::hardware::wf_tron1a {
             }
         }
 
-        // void setupCommunication() {
-        //     try {
-        //         // Create SDK publisher for low commands
-        //         lowCommandPublisher_.reset(new ::unitree::robot::ChannelPublisher<unitree_hg::msg::dds_::LowCmd_>(HG_CMD_TOPIC));
-        //         lowCommandPublisher_->InitChannel();
+        void setupSubscriptions() {
 
-        //         // Create SDK subscriber for low state
-        //         lowStateSubscriber_.reset(new ::unitree::robot::ChannelSubscriber<unitree_hg::msg::dds_::LowState_>(HG_STATE_TOPIC));
-        //         lowStateSubscriber_->InitChannel(
-        //             std::bind(&Tron1aNode::LowStateHandler, this, std::placeholders::_1), 1);
+            robot_->subscribeRobotState([this](const limxsdk::RobotStateConstPtr& msg) {
+                robotStateBuffer_.writeFromNonRT(*msg);
+                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Received robot state update with timestamp: %lu, motor count: %zu, q[0]=%.3f",
+                                    msg->stamp, msg->q.size(), msg->q.size() > 0 ? msg->q[0] : 0.0);
+            });
 
-        //         RCLCPP_INFO(this->get_logger(), "SDK communication channels established");
-        //     } catch (const std::exception& e) {
-        //         RCLCPP_ERROR(this->get_logger(), "Failed to setup communication: %s", e.what());
-        //         throw;
-        //     }
-        // }
-
-        void setupCommunication() {
-            // Subscribe to robot state
-            wheellegged_->subscribeRobotState(
-                std::bind(&Tron1aNode::RobotStateHandler, this, std::placeholders::_1));
-            
             // Subscribe to IMU data
-            wheellegged_->subscribeImuData(
-                std::bind(&Tron1aNode::ImuDataHandler, this, std::placeholders::_1));
-            
+            robot_->subscribeImuData([this](const limxsdk::ImuDataConstPtr& msg) {
+                imuDataBuffer_.writeFromNonRT(*msg);
+                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Received IMU data - acc: [%.2f, %.2f, %.2f]",
+                                    msg->acc[0], msg->acc[1], msg->acc[2]);
+            });
+
             // Subscribe to joystick
-            wheellegged_->subscribeSensorJoy(
-                std::bind(&Tron1aNode::SensorJoyHandler, this, std::placeholders::_1));
-            
-            // Initialize command structure
-            robot_cmd_ = limxsdk::RobotCmd(wheellegged_->getMotorNumber());
+            robot_->subscribeSensorJoy([this](const limxsdk::SensorJoyConstPtr& msg) {
+                sensorJoyBuffer_.writeFromNonRT(*msg);
+                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                    "Received SensorJoy data - axes: %zu, buttons: %zu",
+                                    msg->axes.size(), msg->buttons.size());
+            });
         }
 
-        void RobotStateHandler(const limxsdk::RobotStateConstPtr &msg) {
-            std::lock_guard<std::mutex> lock(stateMutex_);
-            robot_state_ = *msg;
-        }
-        
-        void ImuDataHandler(const limxsdk::ImuDataConstPtr &msg) {
-            std::lock_guard<std::mutex> lock(imuMutex_);
-            imu_data_ = *msg;
-        }
-        
-        void SensorJoyHandler(const limxsdk::SensorJoyConstPtr &msg) {
-            std::lock_guard<std::mutex> lock(joyMutex_);
-            sensor_joy_ = *msg;
-            extractWirelessController(); // Extract from sensor_joy_ instead
+        void initializeBuffers() {
+            // Initialize buffers with proper sizes now that SDK is initialized
+            robotStateBuffer_.writeFromNonRT(limxsdk::RobotState(robot_->getMotorNumber()));
+            imuDataBuffer_.writeFromNonRT(limxsdk::ImuData());
+            sensorJoyBuffer_.writeFromNonRT(limxsdk::SensorJoy());
+
+            // Initialize robot command structure with the correct motor count
+            robot_cmd_.resize(robot_->getMotorNumber());
+
+            RCLCPP_INFO(this->get_logger(), "Buffers initialized with %d motors", robot_->getMotorNumber());
         }
 
-        void extractWirelessController() {
-            // Extract gamepad data from LimX SDK SensorJoy structure
-            // LimX SDK joystick axes order: typically [lx, ly, rx, ry, ...]
-            // Buttons are in a vector<int32_t>
-            if (sensor_joy_.axes.size() >= 4) {
-                joy_.lx = sensor_joy_.axes[0];
-                joy_.ly = sensor_joy_.axes[1];
-                joy_.rx = sensor_joy_.axes[2];
-                joy_.ry = sensor_joy_.axes[3];
-            }
-            
-            // Convert button vector to bitmask
-            joy_.keys = 0;
-            for (size_t i = 0; i < sensor_joy_.buttons.size() && i < 16; ++i) {
-                if (sensor_joy_.buttons[i] != 0) {
-                    joy_.keys |= (1 << i);
-                }
-            }
-        }
         void setupJointMappings() {
             CanonicalJointNames_.clear();
             hardwareToDataMapping_.clear();
@@ -319,23 +302,17 @@ namespace crl::unitree::hardware::wf_tron1a {
             }
 
             // LimX SDK motor order mapping for WF_TRON1A:
-            // LimX SDK motor indices: 0: LF_HAA, 1: LF_HFE, 2: LF_KFE, 3: LF_WHL
-            //                         4: LH_HAA, 5: LH_HFE, 6: LH_KFE, 7: LH_WHL (not used)
-            //                         8: RF_HAA, 9: RF_HFE, 10: RF_KFE, 11: RF_WH
-            //                         12: RH_HAA, 13: RH_HFE, 14: RH_KFE, 15: RH_WHL (not used)
-            // Canonical joint names: abad_L_Joint, hip_L_Joint, knee_L_Joint, wheel_L_Joint,
-            //                        abad_R_Joint, hip_R_Joint, knee_R_Joint, wheel_R_Joint
-            // Direct mapping: abad_L->0, hip_L->1, knee_L->2, wheel_L->3,
-            //                 abad_R->8, hip_R->9, knee_R->10, wheel_R->11
+            // 0: abad_L_Joint, 1: hip_L_Joint, 2: knee_L_Joint, 3: wheel_L_Joint
+            // 4: abad_R_Joint, 5: hip_R_Joint, 6: knee_R_Joint, 7: wheel_R_Joint
             std::map<std::string, size_t> canonicalToLimxMotorIndex = {
                 {"abad_L_Joint", 0},
                 {"hip_L_Joint", 1},
                 {"knee_L_Joint", 2},
                 {"wheel_L_Joint", 3},
-                {"abad_R_Joint", 8},
-                {"hip_R_Joint", 9},
-                {"knee_R_Joint", 10},
-                {"wheel_R_Joint", 11}
+                {"abad_R_Joint", 4},
+                {"hip_R_Joint", 5},
+                {"knee_R_Joint", 6},
+                {"wheel_R_Joint", 7}
             };
 
             // Initialize mappings with invalid values
@@ -372,21 +349,13 @@ namespace crl::unitree::hardware::wf_tron1a {
 
         void updateDataWithSensorReadings() override {
             // Create sensor data structure for humanoid robot
-            crl::humanoid::commons::RobotSensor sensorInput;
-            crl::humanoid::commons::RobotState robotState;
+            auto sensorInput = this->data_->getSensor();
+            auto robotState = this->data_->getRobotState();
 
             // Thread-safe access to LimX SDK data
-            limxsdk::RobotState currentRobotState;
-            limxsdk::ImuData currentImu;
-            JoyData currentJoy;
-            {
-                std::lock_guard<std::mutex> stateLock(stateMutex_);
-                std::lock_guard<std::mutex> imuLock(imuMutex_);
-                std::lock_guard<std::mutex> joyLock(joyMutex_);
-                currentRobotState = robot_state_;
-                currentImu = imu_data_;
-                currentJoy = joy_;
-            }
+            limxsdk::RobotState currentRobotState = *robotStateBuffer_.readFromRT();
+            limxsdk::ImuData currentImu = *imuDataBuffer_.readFromRT();
+            limxsdk::SensorJoy currentJoy = *sensorJoyBuffer_.readFromRT();
 
             // Populate IMU data from LimX SDK
             sensorInput.accelerometer = crl::V3D(
@@ -406,6 +375,8 @@ namespace crl::unitree::hardware::wf_tron1a {
                 currentImu.quat[2],  // y
                 currentImu.quat[3]   // z
             );
+
+            // robotState.baseOrientation = sensorInput.imuOrientation;
 
             // Populate joint sensor data using mappings
             sensorInput.jointSensors.resize(CanonicalJointNames_.size());
@@ -482,23 +453,34 @@ namespace crl::unitree::hardware::wf_tron1a {
             {
                 auto command = this->data_->getCommand();
 
-                // forward speed
-                if (currentJoy.ly > 0) {
-                    command.targetForwardSpeed = currentJoy.ly * joystickMaxForwardVel_;
-                } else {
-                    command.targetForwardSpeed = currentJoy.ly * joystickMaxBackwardVel_;
+                // Check if joystick data is available
+                if (currentJoy.axes.size() >= 3) {
+                    // forward speed
+                    if (currentJoy.axes[1] > 0) {
+                        command.targetForwardSpeed = currentJoy.axes[1] * joystickMaxForwardVel_;
+                    } else {
+                        command.targetForwardSpeed = currentJoy.axes[1] * joystickMaxBackwardVel_;
+                    }
+                    // sideways speed
+                    command.targetSidewaysSpeed = -currentJoy.axes[0] * joystickMaxSidewaysVel_;
+                    // turning speed
+                    command.targetTurningSpeed = -currentJoy.axes[2] * joystickMaxTurningVel_;
                 }
-                // sideways speed
-                command.targetSidewaysSpeed = -currentJoy.lx * joystickMaxSidewaysVel_;
-                // turning speed
-                command.targetTurningSpeed = -currentJoy.rx * joystickMaxTurningVel_;
 
                 this->data_->setCommand(command);
 
+                // Convert button vector to bitmask
+                uint32_t keys = 0;
+                for (size_t i = 0; i < currentJoy.buttons.size() && i < 32; ++i) {
+                    if (currentJoy.buttons[i] != 0) {
+                        keys |= (1 << i);
+                    }
+                }
+
                 // Configurable keybindings for state transitions
-                if (currentJoy.keys & modifierButton_) {
+                if (keys & modifierButton_) {
                     for (const auto& binding : stateKeybindings_) {
-                        if (currentJoy.keys & binding.keyConstant) {
+                        if (keys & binding.keyConstant) {
                             RCLCPP_INFO(this->get_logger(), "Trigger state transition to %s.", binding.stateName.c_str());
 
                             // Broadcast state transition using the stored state enum
@@ -527,8 +509,7 @@ namespace crl::unitree::hardware::wf_tron1a {
             }
 
             // Set timestamp
-            robot_cmd_.stamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count();
+            robot_cmd_.stamp = this->now().nanoseconds();
 
             // Apply control commands using mappings
             for (size_t dataIdx = 0; dataIdx < control.jointControl.size() && dataIdx < CanonicalJointNames_.size(); ++dataIdx) {
@@ -552,7 +533,7 @@ namespace crl::unitree::hardware::wf_tron1a {
                                             this->jointDampingDefault_[dataIdx];
                             switch (static_cast<int>(control.jointControl[dataIdx].mode)) {
                                 case 1:  // Position mode
-                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.mode[hardwareIdx] = 0;
                                     robot_cmd_.Kp[hardwareIdx] = jointKp;
                                     robot_cmd_.Kd[hardwareIdx] = jointKd;
                                     robot_cmd_.q[hardwareIdx] = control.jointControl[dataIdx].desiredPos;
@@ -561,7 +542,7 @@ namespace crl::unitree::hardware::wf_tron1a {
                                     break;
 
                                 case 2:  // Velocity mode
-                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.mode[hardwareIdx] = 0;
                                     robot_cmd_.Kp[hardwareIdx] = 0.0f;
                                     robot_cmd_.Kd[hardwareIdx] = jointKd;
                                     robot_cmd_.q[hardwareIdx] = 0.0f;
@@ -570,7 +551,7 @@ namespace crl::unitree::hardware::wf_tron1a {
                                     break;
 
                                 case 3:  // Force/Torque mode
-                                    robot_cmd_.mode[hardwareIdx] = 1;
+                                    robot_cmd_.mode[hardwareIdx] = 0;
                                     robot_cmd_.Kp[hardwareIdx] = jointKp;
                                     robot_cmd_.Kd[hardwareIdx] = jointKd;
                                     robot_cmd_.q[hardwareIdx] = control.jointControl[dataIdx].desiredPos;
@@ -602,7 +583,10 @@ namespace crl::unitree::hardware::wf_tron1a {
             }
 
             // Publish command via LimX SDK
-            wheellegged_->publishRobotCmd(robot_cmd_);
+            bool publishSuccess = robot_->publishRobotCmd(robot_cmd_);
+            if (!publishSuccess) {
+                RCLCPP_ERROR(this->get_logger(), "Failed to publish robot command to LimX SDK");
+            }
         }
 
 
@@ -615,7 +599,7 @@ namespace crl::unitree::hardware::wf_tron1a {
         // SDK configuration
         std::string robotIpAddress_;
         bool isSDKInitialized_;
-        limxsdk::Wheellegged* wheellegged_;
+        limxsdk::Wheellegged* robot_;
 
         // Joystick velocity parameters
         double joystickMaxForwardVel_;
@@ -624,23 +608,18 @@ namespace crl::unitree::hardware::wf_tron1a {
         double joystickMaxTurningVel_;
 
         // Keybinding parameters
-        uint16_t modifierButton_;
+        uint32_t modifierButton_;
         std::vector<StateKeyBinding> stateKeybindings_;
         StateNameToEnumMap stateNameToEnumMap_;
 
         // LimX SDK data structures
+        realtime_tools::RealtimeBuffer<limxsdk::RobotState> robotStateBuffer_; ///< Buffer for robot state.
+        realtime_tools::RealtimeBuffer<limxsdk::ImuData> imuDataBuffer_; ///< Buffer for IMU data.
+        realtime_tools::RealtimeBuffer<limxsdk::SensorJoy> sensorJoyBuffer_; ///< Buffer for joystick data.
         limxsdk::RobotCmd robot_cmd_;
-        limxsdk::RobotState robot_state_;
-        limxsdk::ImuData imu_data_;
-        limxsdk::SensorJoy sensor_joy_;
         JoyData joy_;
-
-        // Thread safety
-        std::mutex stateMutex_;
-        std::mutex imuMutex_;
-        std::mutex joyMutex_;
     };
 
 }  // namespace crl::unitree::hardware::wf_tron1a
 
-#endif  //CRL_HUMANOID_HARDWARE_WF_TRON1A_NODE
+#endif  // CRL_HUMANOID_HARDWARE_WF_TRON1A_NODE

@@ -22,7 +22,7 @@
 
   robot:
     ros__parameters:
-      time_step_size: 0.002  # 500 hz
+      time_step_size: 0.0005  # 2000 hz
       network_interface: "enx00133bfd284e"
 
       joystick_max_forward_velocity: 0.8   # Maximum forward walking speed

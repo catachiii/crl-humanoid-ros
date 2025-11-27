@@ -22,6 +22,7 @@ find_package(crl_fsm REQUIRED)
 find_package(crl_fsm_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(limxsdk_lowlevel REQUIRED)
+find_package(realtime_tools REQUIRED)
 
 # Build unitree_sdk2 as a subdirectory
 add_subdirectory(ext/unitree_sdk2)
@@ -57,6 +58,7 @@ ament_target_dependencies(${PROJECT_NAME} INTERFACE
     crl_fsm_msgs
     Eigen3
     limxsdk_lowlevel
+    realtime_tools
 )
 
 # -----------------------------------------------------------------------------
@@ -107,6 +109,7 @@ ament_target_dependencies(hardware
     crl_humanoid_commons
     crl_fsm
     crl_fsm_msgs
+    realtime_tools
 )
 
 install(
@@ -134,5 +137,5 @@ ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_include_directories(include include/ddscxx)
 
 # Export dependencies for other packages that might depend on this one
-ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs Eigen3 unitree_sdk2 limxsdk_lowlevel)
+ament_export_dependencies(rclcpp std_msgs geometry_msgs crl_humanoid_commons crl_fsm crl_fsm_msgs Eigen3 unitree_sdk2 limxsdk_lowlevel realtime_tools)
 ament_package()

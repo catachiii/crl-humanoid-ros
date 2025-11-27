@@ -9,7 +9,7 @@
 #include <crl_humanoid_commons/nodes/StarterNode.h>
 #include <crl_humanoid_commons/nodes/CommNode.h>
 #include <crl_humanoid_hardware/G1Node.h>
-#include <crl_humanoid_hardware/WF_TRON1A.h>
+#include <crl_humanoid_hardware/WF_TRON1ANode.h>
 #include <rclcpp/rclcpp.hpp>
 #include <cxxopts.hpp>
 

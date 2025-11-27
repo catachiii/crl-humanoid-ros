@@ -23,16 +23,16 @@
   robot:
     ros__parameters:
       time_step_size: 0.002  # 500 hz
-      robot_ip_address: "127.0.0.1"  # For simulation use "127.0.0.1", for real robot use "10.192.1.2" or robot's IP
+      robot_ip_address: "10.192.1.2"
 
-      joystick_max_forward_velocity: 4.0   # Maximum forward walking speed
-      joystick_max_backward_velocity: 4.0  # Maximum backward walking speed
-      joystick_max_sideways_velocity: 0.8  # Maximum sideways walking speed
+      joystick_max_forward_velocity: 1.0   # Maximum forward walking speed
+      joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
+      joystick_max_sideways_velocity: 1.0  # Maximum sideways walking speed
       joystick_max_turning_velocity: 1.0   # Maximum turning speed
 
       # Keybinding configuration for state transitions
-      # Available modifier buttons: R1, L1, R2, L2, start, select, F1, F2
-      # Available action buttons: A, B, X, Y, up, down, left, right
+      # Available modifier buttons: L1, R1, L2, R2, Select, Start
+      # Available action buttons: X, Circle, Square, Triangle, Up, Down, Left, Right
       keybinding_modifier: "L1"    # Modifier button to hold
 
       # State keybindings - flexible configuration for multiple states
@@ -40,23 +40,22 @@
       # Currently available states: ESTOP, STAND, WALK
       # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
       state_keybindings:
-        states: ["ESTOP", "SIT", "STAND", "WALK"]  # State names (must match enum in main.cpp)
-        keys:   ["B",     "A",     "X" , "Y"]     # Corresponding keys for each state
+        states: ["ESTOP", "STAND", "WALK"]  # State names (must match enum in main.cpp)
+        keys:   ["Circle", "Square", "Triangle"]     # Corresponding keys for each state
 
       # Usage: Hold [modifier] + [state_key] to trigger state transition
       # Examples:
-      # - Hold L1 + B to trigger ESTOP
-      # - Hold L1 + A to trigger STAND
-      # - Hold L1 + X to trigger WALK
+      # - Hold L1 + Circle to trigger ESTOP
+      # - Hold L1 + Square to trigger STAND
+      # - Hold L1 + Triangle to trigger WALK
       #
       # To add more states:
       # 1. First, update the crl_fsm_states macro in main.cpp to include new states
       # 2. Add state machines and transitions in main.cpp
       # 3. Update the state mapping in main.cpp
       # 4. Then extend both arrays here:
-      # states: ["ESTOP", "STAND", "WALK", "GETUP", "SITDOWN"]
-      # keys:   ["B",     "A",     "X",    "Y",     "up"]
-      # keys:   ["B",     "A",     "X",    "Y",     "up"]
+      # states: ["ESTOP",  "STAND",  "WALK",     "GETUP", "SITDOWN"]
+      # keys:   ["Circle", "Square", "Triangle", "Up",     "Down"]
 
       # Optional: Add other hardware-specific parameters here
       # joint_stiffness_scale: 1.0

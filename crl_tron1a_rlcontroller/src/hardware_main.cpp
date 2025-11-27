@@ -6,7 +6,7 @@
 #include <crl_humanoid_commons/nodes/CommNode.h>
 
 #include <crl_humanoid_simulator/WF_TRON1ASimNode.h>
-#include <crl_humanoid_hardware/WF_TRON1A.h>
+#include <crl_humanoid_hardware/WF_TRON1ANode.h>
 
 #include <crl_tron1a_rlcontroller/CRLTron1ARLControllerNode.h>
 #include <crl_tron1a_rlcontroller/CRLTron1AWalkController.h>
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     // transitions
     crl::fsm::Transition<States::ESTOP, States::SIT> t1;
     crl::fsm::Transition<States::SIT, States::STAND> t2;
-    crl::fsm::Transition<States::SIT, States::ESTOP> t3;    
+    crl::fsm::Transition<States::SIT, States::ESTOP> t3;
     crl::fsm::Transition<States::STAND, States::ESTOP> t4;
     crl::fsm::Transition<States::STAND, States::WALK> t5;
     crl::fsm::Transition<States::WALK, States::ESTOP> t6;
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
     const auto commNode = std::make_shared<crl::humanoid::commons::CommNode>(model, data);
     std::shared_ptr<crl::humanoid::commons::RobotNode<States, Machines, 1>> robotNode;
-    
+
 
     if (modelName == "WF_TRON1A") {
         // Create state name to enum mapping for Tron1aNode with all 5 states
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
         auto stateMapping = Tron1aNodeType::createStateMapping({
             {"ESTOP", States::ESTOP},
             {"STAND", States::STAND},
-            {"WALK", States::WALK}, 
+            {"WALK", States::WALK},
             {"SIT", States::SIT}
         });
 
