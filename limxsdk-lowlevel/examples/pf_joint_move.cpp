@@ -81,7 +81,7 @@ private:
   int joint_id = 0;                 // ID of the controlled joint
   double joint_kp = 60;             // Proportional gain of the PID controller
   double joint_kd = 3;              // Derivative gain of the PID controller
-  double joint_targetPos = 0.0;     // Target position for the joint
+  double joint_targetPos = 1.0;     // Target position for the joint
   double joint_targetVel = 0;       // Target velocity for the joint (not used in this implementation)
   double joint_targetTorque = 0;    // Target torque for the joint (not used in this implementation)
 

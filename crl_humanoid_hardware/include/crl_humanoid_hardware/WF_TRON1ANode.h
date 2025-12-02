@@ -11,28 +11,18 @@
 #include <unordered_map>
 #include <map>
 #include <cstdint>
-#include "realtime_tools/realtime_buffer.h"
 
 // crl_humanoid_commons
 #include "crl_humanoid_commons/nodes/RobotNode.h"
 
-// limx_sdk
-#include <limxsdk/wheellegged.h>
+// limx_sdk - use PointFoot for WheelFoot (TRON1A) robots
+#include <limxsdk/pointfoot.h>
 #include <limxsdk/datatypes.h>
 
 namespace crl::unitree::hardware::wf_tron1a {
 
     // Number of motors in WF_TRON1A
     const int WF_TRON1A_NUM_MOTOR = 8;
-
-    // Simple joystick data structure to maintain compatibility
-    struct JoyData {
-        float lx = 0.0f;
-        float ly = 0.0f;
-        float rx = 0.0f;
-        float ry = 0.0f;
-        uint32_t keys = 0;
-    };
 
     template <typename States, typename Machines, std::size_t N>
     class Tron1aNode : public crl::humanoid::commons::RobotNode<States, Machines, N> {
@@ -106,26 +96,20 @@ namespace crl::unitree::hardware::wf_tron1a {
             setupJointMappings();
 
             // Initialize SDK (this starts the communication)
-            robot_ = limxsdk::Wheellegged::getInstance();
+            robot_ = limxsdk::PointFoot::getInstance();  // Use PointFoot for WheelFoot
             initializeSDK();
 
-            // Initialize buffers BEFORE setting up subscriptions (like the example does)
-            // Note: getMotorNumber() works before init() - it returns a constant
-            int motorCount = robot_->getMotorNumber();
-            RCLCPP_INFO(this->get_logger(), "Motor count before init: %d", motorCount);
-            robotStateBuffer_.writeFromNonRT(limxsdk::RobotState(motorCount));
-            imuDataBuffer_.writeFromNonRT(limxsdk::ImuData());
-            sensorJoyBuffer_.writeFromNonRT(limxsdk::SensorJoy());
-            robot_cmd_.resize(motorCount);
+            // initialize buffers
+            initializeBuffers();
 
-            // Setup subscriptions BEFORE initializing SDK
+            // Setup subscriptions (after SDK init, like in the examples)
             setupSubscriptions();
         }
 
     private:
         // Convert string to button constant
         uint32_t stringToButtonConstant(const std::string& buttonName) {
-            if (buttonName == "X") return 1;          // Index 0
+            if (buttonName == "Cross") return 1;          // Index 0
             else if (buttonName == "Circle") return 2;    // Index 1
             else if (buttonName == "Square") return 4;    // Index 2
             else if (buttonName == "Triangle") return 8;  // Index 3
@@ -142,8 +126,8 @@ namespace crl::unitree::hardware::wf_tron1a {
             else if (buttonName == "Menu") return 65536;  // Index 16
             else if (buttonName == "Back") return 131072; // Index 17
             else {
-                RCLCPP_WARN(this->get_logger(), "Unknown button name: %s, defaulting to X", buttonName.c_str());
-                return 1; // Default to X
+                RCLCPP_WARN(this->get_logger(), "Unknown button name: %s, defaulting to Cross", buttonName.c_str());
+                return 1; // Default to Cross
             }
         }
 
@@ -252,40 +236,42 @@ namespace crl::unitree::hardware::wf_tron1a {
         }
 
         void setupSubscriptions() {
-
             robot_->subscribeRobotState([this](const limxsdk::RobotStateConstPtr& msg) {
-                robotStateBuffer_.writeFromNonRT(*msg);
-                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                    "Received robot state update with timestamp: %lu, motor count: %zu, q[0]=%.3f",
-                                    msg->stamp, msg->q.size(), msg->q.size() > 0 ? msg->q[0] : 0.0);
+                {
+                    std::unique_lock<std::shared_mutex> lock(sdk_data_mutex_);
+                    robot_state_ = *msg;
+                }
+                // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                //                     "Received robot state update with timestamp: %lu, motor count: %zu, q[0]=%.3f",
+                //                     msg->stamp, msg->q.size(), msg->q.size() > 0 ? msg->q[0] : 0.0);
             });
 
             // Subscribe to IMU data
             robot_->subscribeImuData([this](const limxsdk::ImuDataConstPtr& msg) {
-                imuDataBuffer_.writeFromNonRT(*msg);
-                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                    "Received IMU data - acc: [%.2f, %.2f, %.2f]",
-                                    msg->acc[0], msg->acc[1], msg->acc[2]);
+                {
+                    std::unique_lock<std::shared_mutex> lock(sdk_data_mutex_);
+                    imu_data_ = *msg;
+                }
+                // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                //                     "Received IMU data - acc: [%.2f, %.2f, %.2f]",
+                //                     msg->acc[0], msg->acc[1], msg->acc[2]);
             });
 
             // Subscribe to joystick
             robot_->subscribeSensorJoy([this](const limxsdk::SensorJoyConstPtr& msg) {
-                sensorJoyBuffer_.writeFromNonRT(*msg);
-                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                    "Received SensorJoy data - axes: %zu, buttons: %zu",
-                                    msg->axes.size(), msg->buttons.size());
+                {
+                    std::unique_lock<std::shared_mutex> lock(sdk_data_mutex_);
+                    sensor_joy_ = *msg;
+                }
+                // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                //                     "Received SensorJoy data - axes: %zu, buttons: %zu",
+                //                     msg->axes.size(), msg->buttons.size());
             });
         }
 
         void initializeBuffers() {
-            // Initialize buffers with proper sizes now that SDK is initialized
-            robotStateBuffer_.writeFromNonRT(limxsdk::RobotState(robot_->getMotorNumber()));
-            imuDataBuffer_.writeFromNonRT(limxsdk::ImuData());
-            sensorJoyBuffer_.writeFromNonRT(limxsdk::SensorJoy());
-
-            // Initialize robot command structure with the correct motor count
-            robot_cmd_.resize(robot_->getMotorNumber());
-
+            robot_state_ = limxsdk::RobotState(robot_->getMotorNumber());
+            robot_cmd_ = limxsdk::RobotCmd(robot_->getMotorNumber());
             RCLCPP_INFO(this->get_logger(), "Buffers initialized with %d motors", robot_->getMotorNumber());
         }
 
@@ -352,10 +338,16 @@ namespace crl::unitree::hardware::wf_tron1a {
             auto sensorInput = this->data_->getSensor();
             auto robotState = this->data_->getRobotState();
 
-            // Thread-safe access to LimX SDK data
-            limxsdk::RobotState currentRobotState = *robotStateBuffer_.readFromRT();
-            limxsdk::ImuData currentImu = *imuDataBuffer_.readFromRT();
-            limxsdk::SensorJoy currentJoy = *sensorJoyBuffer_.readFromRT();
+            // Thread-safe access to LimX SDK data with shared lock for reading
+            limxsdk::RobotState currentRobotState;
+            limxsdk::ImuData currentImu;
+            limxsdk::SensorJoy currentJoy;
+            {
+                std::shared_lock<std::shared_mutex> lock(sdk_data_mutex_);
+                currentRobotState = robot_state_;
+                currentImu = imu_data_;
+                currentJoy = sensor_joy_;
+            }
 
             // Populate IMU data from LimX SDK
             sensorInput.accelerometer = crl::V3D(
@@ -462,9 +454,9 @@ namespace crl::unitree::hardware::wf_tron1a {
                         command.targetForwardSpeed = currentJoy.axes[1] * joystickMaxBackwardVel_;
                     }
                     // sideways speed
-                    command.targetSidewaysSpeed = -currentJoy.axes[0] * joystickMaxSidewaysVel_;
+                    command.targetSidewaysSpeed = currentJoy.axes[0] * joystickMaxSidewaysVel_;
                     // turning speed
-                    command.targetTurningSpeed = -currentJoy.axes[2] * joystickMaxTurningVel_;
+                    command.targetTurningSpeed = currentJoy.axes[2] * joystickMaxTurningVel_;
                 }
 
                 this->data_->setCommand(command);
@@ -599,7 +591,7 @@ namespace crl::unitree::hardware::wf_tron1a {
         // SDK configuration
         std::string robotIpAddress_;
         bool isSDKInitialized_;
-        limxsdk::Wheellegged* robot_;
+        limxsdk::PointFoot* robot_;  // Use PointFoot for WheelFoot variant
 
         // Joystick velocity parameters
         double joystickMaxForwardVel_;
@@ -613,11 +605,13 @@ namespace crl::unitree::hardware::wf_tron1a {
         StateNameToEnumMap stateNameToEnumMap_;
 
         // LimX SDK data structures
-        realtime_tools::RealtimeBuffer<limxsdk::RobotState> robotStateBuffer_; ///< Buffer for robot state.
-        realtime_tools::RealtimeBuffer<limxsdk::ImuData> imuDataBuffer_; ///< Buffer for IMU data.
-        realtime_tools::RealtimeBuffer<limxsdk::SensorJoy> sensorJoyBuffer_; ///< Buffer for joystick data.
+        limxsdk::RobotState robot_state_;
+        limxsdk::ImuData imu_data_;
+        limxsdk::SensorJoy sensor_joy_;
         limxsdk::RobotCmd robot_cmd_;
-        JoyData joy_;
+
+        // Mutex for thread-safe access to SDK data structures
+        mutable std::shared_mutex sdk_data_mutex_;
     };
 
 }  // namespace crl::unitree::hardware::wf_tron1a

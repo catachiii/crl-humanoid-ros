@@ -31,14 +31,13 @@
 
   robot:
     ros__parameters:
-      time_step_size: 0.002 #0.001667  # sim rate
-      robot_xml_file: "wf_tron1a_description/xml/scene_crl.xml"
-      robot_ip_address: "127.0.0.1"  # For simulation use "127.0.0.1", for real robot use "10.192.1.2" or robot's IP
+      time_step_size: 0.001  # 1000 hz
+      robot_ip_address: "10.192.1.2"
 
-      joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
-      joystick_max_backward_velocity: 1.5  # Maximum backward walking speed
+      joystick_max_forward_velocity: 1.0   # Maximum forward walking speed
+      joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
       joystick_max_sideways_velocity: 1.0  # Maximum sideways walking speed
-      joystick_max_turning_velocity: 0.5   # Maximum turning speed
+      joystick_max_turning_velocity: 1.0   # Maximum turning speed
 
       keybinding_modifier: "L1"    # Modifier button to hold
 
@@ -48,15 +47,5 @@
       # Future states might include: GETUP, SITDOWN, RUN, IDLE, etc.
       state_keybindings:
         states: ["ESTOP", "SIT", "STAND", "WALK"]  # State names (must match enum in main.cpp)
-        keys:   ["B",     "A",     "X" ,     "Y"]     # Corresponding keys for each state
-
-      # Elastic band parameters (adjust target_height to lower the band)
-      elastic_band_enabled: true
-      elastic_band_stiffness: 5000.0 # 1000.0 before     # N/m
-      elastic_band_damping: 100.0    # Ns/m
-      elastic_band_target_height: 0.9 #1.1 before   # m (lowered from default 1.45m)
-      # joystick_max_forward_velocity: 1.5   # Maximum forward walking speed
-      # joystick_max_backward_velocity: 1.0  # Maximum backward walking speed
-      # joystick_max_sideways_velocity: 0.5  # Maximum sideways walking speed
-      # joystick_max_turning_velocity: 1.0   # Maximum turning speed
+        keys:   ["Circle", "Cross", "Square", "Triangle"]     # Corresponding keys for each state
 
