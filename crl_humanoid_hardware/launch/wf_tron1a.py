@@ -1,6 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import SetEnvironmentVariable
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -17,6 +18,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        SetEnvironmentVariable('ROBOT_TYPE', 'WF_TRON1A'),
         Node(
             package='crl_humanoid_hardware',
             namespace='tron1a_hardware',

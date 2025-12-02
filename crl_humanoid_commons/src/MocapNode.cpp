@@ -23,7 +23,7 @@ namespace crl::humanoid::commons {
         auto offsetVec = this->get_parameter("offset").as_double_array();
         if (offsetVec.size() == 3) {
             offset_ = P3D(offsetVec[0], offsetVec[1], offsetVec[2]);
-            RCLCPP_INFO(this->get_logger(), "Mocap offset set to: [%.3f, %.3f, %.3f]", offset_.x(), offset_.y(), offset_.z());
+            RCLCPP_INFO(this->get_logger(), "Mocap offset set to: [%.3f, %.3f, %.3f]", offset_.x, offset_.y, offset_.z);
         } else {
             offset_ = P3D(0.0, 0.0, 0.0);
             RCLCPP_WARN(this->get_logger(), "Invalid offset parameter size. Using default [0.0, 0.0, 0.0]");
