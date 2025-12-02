@@ -1,7 +1,3 @@
-//
-// Created by copilot on 02.09.25.
-//
-
 #include <crl_fsm/fsm.h>
 #include <crl_humanoid_commons/RobotData.h>
 #include <crl_humanoid_commons/nodes/ControllerNode.h>

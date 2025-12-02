@@ -1,7 +1,3 @@
-//
-// Created by MocapNode on 12.11.25.
-//
-
 #ifndef CRL_HUMANOID_MOCAPNODE_H
 #define CRL_HUMANOID_MOCAPNODE_H
 
@@ -31,6 +27,9 @@ namespace crl::humanoid::commons {
     private:
         // ROS parameter for rigid body ID
         int rigidBodyId_;
+
+        // Offset to apply to mocap position
+        P3D offset_;
 
         // Subscription
         rclcpp::Subscription<optitrack_msgs::msg::MocapFrameData>::SharedPtr mocapSubscription_;

@@ -67,6 +67,7 @@
     ros__parameters:
       time_step_size: 0.001667  # will be used in python controller, so set to 600Hz
       rigid_body_id: 2  # ID of the mocap rigid body to track
+      offset: [0.0, 0.0, 0.02]  # Offset to apply to the mocap position in meters
 
   robot:
     ros__parameters:
