@@ -218,6 +218,18 @@ pip3 install numpy onnxruntime
 - ```crl_g1_mimiccontroller```: DeepMimic and DeepTrack controllers
 - ```crl_g1_goalcontroller```: Goal-directed controller with Python integration
 
+### Tron1a Controller Packages
+- ```crl_tron1a_rlcontroller```: Reinforcement learning-based locomotion controller for Limx Tron1a
+
+### Motion Capture Integration
+- ```crl_optitrack_ros```: OptiTrack motion capture system integration
+  - ```optitrack_msgs```: Message definitions for OptiTrack data
+  - ```optitrack_adaptor```: ROS adapter for OptiTrack system
+  - ```latency_checker```: Tool for measuring motion capture latency
+
+### Hardware SDKs
+- ```limxsdk-lowlevel```: Low-level SDK for Limx robotics hardware
+
 ## Build
 
 The folder structure is the typical ROS 2 workspace layout:
@@ -235,9 +247,16 @@ src/
     ├── crl_humanoid_hardware/
     ├── crl_g1_rlcontroller/
     ├── crl_g1_mimiccontroller/
-    └── crl_g1_goalcontroller_py/
-        ├── crl_g1_goalcontroller/
-        └── crl_g1_goalcontroller_python/
+    ├── crl_g1_goalcontroller_py/
+    │   ├── crl_g1_goalcontroller/
+    │   └── crl_g1_goalcontroller_python/
+    ├── crl_tron1a_rlcontroller/
+    ├── crl_optitrack_ros/
+    │   ├── optitrack_msgs/
+    │   ├── optitrack_adaptor/
+    │   └── latency_checker/
+    ├── limxsdk-lowlevel/
+    └── miscs/
 ```
 
 Start building the workspace with sourcing the ros2 environment:
@@ -263,28 +282,77 @@ source install/setup.bash
 
 ## Running
 
-### Simulator
+### Monitor GUI
 
-You may start running the simulator with:
+The monitor GUI provides visualization and control interface for the robots:
 
 ```bash
+ros2 run crl_humanoid_monitor monitor
+```
+
+### Unitree G1
+
+#### Simulator
+
+Launch the simulator with various controllers:
+
+```bash
+# Simulator only
 ros2 launch crl_humanoid_simulator g1.py
+
+# RL Controller
 ros2 launch crl_g1_rlcontroller g1_sim.py
 ros2 launch crl_g1_rlcontroller g1_sim_v2.py
+
+# Mimic Controllers
 ros2 launch crl_g1_mimiccontroller g1_sim_deepmimic.py
 ros2 launch crl_g1_mimiccontroller g1_sim_deeptrack.py
+
+# Goal Controller
 ros2 launch crl_g1_goalcontroller g1_sim.py
 ```
 
-### Hardware
+#### Hardware
 
 For running on real G1 hardware:
 
 ```bash
+# Hardware Interface
+ros2 launch crl_humanoid_hardware g1.py
+
+# RL Controller
 ros2 launch crl_g1_rlcontroller g1.py
 ros2 launch crl_g1_rlcontroller g1_v2.py
+
+# Mimic Controllers
 ros2 launch crl_g1_mimiccontroller g1_deepmimic.py
 ros2 launch crl_g1_mimiccontroller g1_deeptrack.py
+
+# Goal Controller
 ros2 launch crl_g1_goalcontroller g1.py
+```
+
+### Limx Tron1a
+
+#### Simulator
+
+```bash
+# Simulator only
+ros2 launch crl_humanoid_simulator wf_tron1a.py
+
+# RL Controller
+ros2 launch crl_tron1a_rlcontroller wf_tron1a_sim.py
+```
+
+#### Hardware
+
+For running on real Tron1a hardware:
+
+```bash
+# Hardware Interface
+ros2 launch crl_humanoid_hardware wf_tron1a.py
+
+# RL Controller
+ros2 launch crl_tron1a_rlcontroller wf_tron1a.py
 ```
 
