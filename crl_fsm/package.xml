@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>A finite state machine implementation for robots</description>
   <maintainer email="zijhui@student.ethz.ch">zijhui</maintainer>
-  <license>ETH Computational Robotics Lab</license>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

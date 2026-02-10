@@ -5,7 +5,7 @@
   <version>0.2.0</version>
   <description>ROS message package for humanoid robots.</description>
   <maintainer email="kangd@inf.ethz.ch">Dongho Kang</maintainer>
-  <license>ETH Computational Robotics Lab</license>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

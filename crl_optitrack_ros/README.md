@@ -8,7 +8,7 @@
 
 2. Open Motive and check if there is already a rigidbody named "Go1Gamma". If there is proceed to step 4.
 
-3. Create a rigidbody using the 5 markers. Since we need to align the rigidbody x-axis with the robot, put the robot into stand mode and face the robot towards the front of the room. 
+3. Create a rigidbody using the 5 markers. Since we need to align the rigidbody x-axis with the robot, put the robot into stand mode and face the robot towards the front of the room.
 
 4. Check the x-axis is aligned with the 3 middle trackers in motive. If it isn't, then adjust it in the Motive software.
 
@@ -36,4 +36,4 @@
 
 3. Check if the topic `/optitrack_adaptor/mocap_frame` is available and is publishing correct values.
 
-4. Use the `MocapReceiveNode.h` defined in `crl-unitree/crl_unitree_commons` to process communication with the Mocap.
+4. Use the `MocapReceiveNode.h` defined in `crl_humanoid_commons` to process communication with the MoCap system.

@@ -5,7 +5,7 @@
   <version>0.2.0</version>
   <description>ROS package for humanoid monitor with MuJoCo GUI support.</description>
   <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
-  <license>ETH Computational Robotics Lab</license>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

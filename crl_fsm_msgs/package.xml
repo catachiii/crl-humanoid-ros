@@ -3,9 +3,9 @@
 <package format="3">
   <name>crl_fsm_msgs</name>
   <version>0.1.0</version>
-  <description>TODO: Package description</description>
+  <description>Message and service definitions for the CRL finite state machine</description>
   <maintainer email="allenhui1220@outlook.com">allen</maintainer>
-  <license>ETH Computational Robotics Lab</license>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>rosidl_default_generators</build_depend>

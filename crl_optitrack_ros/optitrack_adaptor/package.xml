@@ -3,9 +3,9 @@
 <package format="3">
   <name>optitrack_adaptor</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>ROS 2 adapter for the OptiTrack motion capture system</description>
   <maintainer email="allenhui1220@outlook.com">allen</maintainer>
-  <license>TODO: License declaration</license>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>

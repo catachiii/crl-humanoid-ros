@@ -3,9 +3,9 @@
 <package format="3">
   <name>crl_g1_goalcontroller_python</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="jin.cheng@inf.ethz.ch">jicheng</maintainer>
-  <license>TODO: License declaration</license>
+  <description>Python nodes for the G1 goal-directed locomotion controller</description>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -3,8 +3,8 @@
   <name>crl_tron1a_rlcontroller</name>
   <version>0.1.0</version>
   <description>Tron1A RL controllers integrated with CRL Humanoid stack.</description>
-  <maintainer email="you@example.com">Your Name</maintainer>
-  <license>Apache-2.0</license>
+  <maintainer email="jin.cheng@inf.ethz.ch">Jin Cheng</maintainer>
+  <license>ETH Zurich Computational Robotics Lab</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

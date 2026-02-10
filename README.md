@@ -1,290 +1,246 @@
-# crl-humanoid-ros
+# CRL Humanoid ROS
 
-Code for CRL's humanoids (unitree G1, pnd adam, limx tron1)
+A ROS 2 framework for humanoid robot simulation and control, developed by the [Computational Robotics Lab (CRL)](https://crl.ethz.ch) at ETH Zurich. Supports the **Unitree G1** and **LimX Tron1A** platforms.
 
-## Dependencies
+## Overview
 
-### Core System Dependencies
+This repository provides a modular ROS 2 workspace for:
 
-- [ROS2](https://docs.ros.org/) Humble
-  - See [this](https://docs.ros.org/en/humble/Installation.html) for install ROS2 on your system.
-- [colcon](https://colcon.readthedocs.io/en/released/index.html)
-  - For using colcon to build ROS2 packages.
-  - If you have installed ROS2 already, do:
+- **Simulation** — MuJoCo-based software-in-the-loop testing
+- **Hardware control** — Real-time communication with robot hardware
+- **Monitoring** — GUI for visualization and operator control
+- **Locomotion controllers** — RL-based, motion-imitation, and goal-directed controllers
 
-    ```bash
-    sudo apt update
-    sudo apt install python3-colcon-common-extensions
-    ```
-- [MuJoCo](https://github.com/google-deepmind/mujoco) 3.3.5
-  - Physics simulation engine (required for monitor GUI and simulator)
-- [Boost](https://www.boost.org/)
-  - C++ libraries (dependency of unitree_legged_sdk)
-- [Eigen](https://eigen.tuxfamily.org/) 3.4+
-  - Linear algebra library
-- [cxxopts](https://github.com/jarro2783/cxxopts) 3.0.0
-  - For parsing command line arguments
-- [nlohmann-json](https://github.com/nlohmann/json) 3.10+
+## Repository Structure
 
-### ROS2 Humble Dependencies
-
-Most packages are included with ROS2 Humble desktop installation. Only install additional packages if needed:
-
-```bash
-# Additional ROS2 Humble packages (if not already installed)
-sudo apt install \
-    ros-humble-rosidl-default-generators \
-    ros-humble-rosidl-default-runtime \
-    ros-humble-ament-lint-auto \
-    ros-humble-ament-lint-common
+```
+crl-humanoid-ros/
+├── crl_ros_helper/               # ROS 2 helper utilities
+├── crl_fsm/                      # Finite state machine framework
+├── crl_fsm_msgs/                 # FSM message/service definitions
+│
+├── crl_humanoid_msgs/            # Humanoid message definitions
+├── crl_humanoid_commons/         # Common interfaces and utilities
+├── crl_humanoid_monitor/         # MuJoCo-based GUI monitor
+├── crl_humanoid_simulator/       # MuJoCo physics simulator
+├── crl_humanoid_hardware/        # Hardware interface (Unitree SDK2 / LimX SDK)
+│
+├── crl_g1_rlcontroller/          # G1 RL locomotion controller
+├── crl_g1_mimiccontroller/       # G1 DeepMimic / DeepTrack controllers
+├── crl_g1_goalcontroller_py/     # G1 goal-directed controller
+│   ├── crl_g1_goalcontroller/    #   C++ launch/config layer
+│   └── crl_g1_goalcontroller_python/  #   Python controller nodes
+│
+├── crl_tron1a_rlcontroller/      # Tron1A RL locomotion controller
+│
+├── crl_optitrack_ros/            # OptiTrack motion capture integration
+│   ├── optitrack_msgs/           #   MoCap message definitions
+│   ├── optitrack_adaptor/        #   ROS 2 adapter for OptiTrack
+│   └── latency_checker/          #   MoCap latency measurement tool
+│
+├── limxsdk-lowlevel/             # LimX Dynamics low-level SDK
+└── miscs/                        # Development environment scripts
 ```
 
-### Hardware-Specific ROS2 Dependencies
+### Package Dependency Graph
 
-Additional middleware packages for Unitree G1 hardware:
-
-```bash
-sudo apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+```
+               ┌──────────────────────────────────────────────────┐
+               │              Controller Packages                 │
+               │  crl_g1_rlcontroller   crl_g1_mimiccontroller    │
+               │  crl_g1_goalcontroller crl_tron1a_rlcontroller   │
+               └──────────────────┬───────────────────────────────┘
+                                  │
+               ┌──────────────────▼───────────────────────────────┐
+               │            Platform Packages                     │
+               │  crl_humanoid_simulator  crl_humanoid_hardware   │
+               │  crl_humanoid_monitor                            │
+               └──────────────────┬───────────────────────────────┘
+                                  │
+               ┌──────────────────▼───────────────────────────────┐
+               │             Core Packages                        │
+               │  crl_humanoid_commons  crl_fsm  crl_ros_helper   │
+               └──────────────────┬───────────────────────────────┘
+                                  │
+               ┌──────────────────▼───────────────────────────────┐
+               │           Message Packages                       │
+               │  crl_humanoid_msgs  crl_fsm_msgs  optitrack_msgs│
+               └──────────────────────────────────────────────────┘
 ```
 
-### ONNX Runtime (for RL controller)
-- [onnxruntime](https://onnxruntime.ai/) 1.15.0
-   - Install onnxruntime 1.15.0 as follows:
-   ```bash
-   mkdir /tmp/onnxInstall
-   cd /tmp/onnxInstall
-   wget -O onnx_archive.nupkg https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime/1.15.0
-   unzip onnx_archive.nupkg
-   # IMPORTANT! Choose the correct platform.
-   sudo cp runtimes/linux-x64/native/libonnxruntime.so /usr/local/lib/libonnxruntime.so.1.15.0
-   sudo cp -r build/native/include/ /usr/local/include/onnxruntime/
-   cd /usr/local/lib
-   sudo ln -s libonnxruntime.so.1.15.0 libonnxruntime.so
-   sudo ldconfig
-   ```
-   - Create ```onnxruntimeConfigVersion.cmake``` under the ```/usr/local/share/cmake/onnxruntime``` directory with the following content.
-   ```cmake
-   set(PACKAGE_VERSION "1.15.0")
+## Prerequisites
 
-   # Check whether the requested PACKAGE_FIND_VERSION is compatible
-   if("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
-      set(PACKAGE_VERSION_COMPATIBLE FALSE)
-   else()
-      set(PACKAGE_VERSION_COMPATIBLE TRUE)
-      if("${PACKAGE_VERSION}" VERSION_EQUAL "${PACKAGE_FIND_VERSION}")
-         set(PACKAGE_VERSION_EXACT TRUE)
-      endif()
-   endif()
-   ```
-   - Create ```onnxruntimeConfig.cmake``` under the ```/usr/local/share/cmake/onnxruntime``` directory with the following content.
-   ```cmake
-   # Custom cmake config file by jcarius to enable find_package(onnxruntime) without modifying LIBRARY_PATH and LD_LIBRARY_PATH
-   #
-   # This will define the following variables:
-   #   onnxruntime_FOUND        -- True if the system has the onnxruntime library
-   #   onnxruntime_INCLUDE_DIRS -- The include directories for onnxruntime
-   #   onnxruntime_LIBRARIES    -- Libraries to link against
-   #   onnxruntime_CXX_FLAGS    -- Additional (required) compiler flags
+| Dependency | Version | Purpose |
+|---|---|---|
+| [ROS 2 Humble](https://docs.ros.org/en/humble/Installation.html) | Humble Hawksbill | Middleware framework |
+| [MuJoCo](https://github.com/google-deepmind/mujoco) | 3.3.5 | Physics simulation & GUI |
+| [ONNX Runtime](https://onnxruntime.ai/) | 1.15.0 | Neural network inference (RL controllers) |
+| [Eigen](https://eigen.tuxfamily.org/) | 3.4+ | Linear algebra |
+| [Boost](https://www.boost.org/) | — | C++ utilities |
+| [cxxopts](https://github.com/jarro2783/cxxopts) | 3.0+ | Command-line argument parsing |
+| [nlohmann-json](https://github.com/nlohmann/json) | 3.10+ | JSON parsing |
+| OpenGL / GLFW3 | — | Graphics (monitor GUI) |
 
-   include(FindPackageHandleStandardArgs)
+## Installation
 
-   # Assume we are in <install-prefix>/share/cmake/onnxruntime/onnxruntimeConfig.cmake
-   get_filename_component(CMAKE_CURRENT_LIST_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-   get_filename_component(onnxruntime_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../../" ABSOLUTE)
-
-   set(onnxruntime_INCLUDE_DIRS ${onnxruntime_INSTALL_PREFIX}/include)
-   set(onnxruntime_LIBRARIES onnxruntime)
-   set(onnxruntime_CXX_FLAGS "") # no flags needed
-
-
-   find_library(onnxruntime_LIBRARY onnxruntime
-      PATHS "${onnxruntime_INSTALL_PREFIX}/lib"
-   )
-
-   add_library(onnxruntime SHARED IMPORTED)
-   set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION "${onnxruntime_LIBRARY}")
-   set_property(TARGET onnxruntime PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_INCLUDE_DIRS}")
-   set_property(TARGET onnxruntime PROPERTY INTERFACE_COMPILE_OPTIONS "${onnxruntime_CXX_FLAGS}")
-
-   find_package_handle_standard_args(onnxruntime DEFAULT_MSG onnxruntime_LIBRARY onnxruntime_INCLUDE_DIRS)
-   ```
-
-### System Library Dependencies
-
-Install the required system libraries:
+### 1. System Libraries
 
 ```bash
 sudo apt update && sudo apt install -y \
-  build-essential \
-  cmake \
-  pkg-config \
-  libboost-all-dev \
-  libeigen3-dev \
-  nlohmann-json3-dev \
-  libcxxopts-dev \
-  libglfw3-dev \
-  freeglut3-dev \
-  mesa-utils \
-  libgl1-mesa-glx \
-  libgl1-mesa-dri
+  build-essential cmake pkg-config \
+  libboost-all-dev libeigen3-dev nlohmann-json3-dev libcxxopts-dev \
+  libglfw3-dev freeglut3-dev mesa-utils libgl1-mesa-glx libgl1-mesa-dri
 ```
 
-### Installing MuJoCo 3.3.5
-
-MuJoCo is required for the monitor GUI and simulator packages:
+### 2. ROS 2 Packages
 
 ```bash
-# Download and install MuJoCo 3.3.5
+sudo apt install -y \
+  python3-colcon-common-extensions \
+  ros-humble-rosidl-default-generators \
+  ros-humble-rosidl-default-runtime \
+  ros-humble-ament-lint-auto \
+  ros-humble-ament-lint-common
+
+# For Unitree G1 hardware (CycloneDDS middleware)
+sudo apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+```
+
+### 3. MuJoCo 3.3.5
+
+```bash
 cd /tmp
 wget https://github.com/google-deepmind/mujoco/releases/download/3.3.5/mujoco-3.3.5-linux-x86_64.tar.gz
 tar -xzf mujoco-3.3.5-linux-x86_64.tar.gz
 sudo mv mujoco-3.3.5 /opt/mujoco
 
-# Create symlinks for system library
 sudo ln -s /opt/mujoco/lib/libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so.3.3.5
-sudo ln -s libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so
-
-# Update library cache
+sudo ln -s /usr/local/lib/libmujoco.so.3.3.5 /usr/local/lib/libmujoco.so
 sudo ldconfig
 ```
 
-**Note:** You do not need to create a pkg-config file for MuJoCo. The build system uses hardcoded paths for MuJoCo and does not require pkg-config.
+### 4. ONNX Runtime 1.15.0
 
-### Quick Installation Script
-
-For convenience, you can install all dependencies with:
+Required by the RL and mimic controller packages.
 
 ```bash
-# Install ROS2 Humble packages
-sudo apt update
-sudo apt install -y \
-    ros-humble-rosidl-default-generators \
-    ros-humble-rosidl-default-runtime \
-    ros-humble-ament-lint-auto \
-    ros-humble-ament-lint-common \
-    python3-colcon-common-extensions
+mkdir /tmp/onnxInstall && cd /tmp/onnxInstall
+wget -O onnx_archive.nupkg https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime/1.15.0
+unzip onnx_archive.nupkg
 
-# Install hardware-specific ROS2 packages (for Unitree G1)
-sudo apt install -y \
-    ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-rosidl-generator-dds-idl
+# Choose the correct platform binary
+sudo cp runtimes/linux-x64/native/libonnxruntime.so /usr/local/lib/libonnxruntime.so.1.15.0
+sudo cp -r build/native/include/ /usr/local/include/onnxruntime/
 
-# Install system libraries
-sudo apt install -y \
-    build-essential \
-    cmake \
-    pkg-config \
-    libboost-all-dev \
-    libeigen3-dev \
-    nlohmann-json3-dev \
-    libcxxopts-dev \
-    libglfw3-dev \
-    freeglut3-dev \
-    mesa-utils \
-    libgl1-mesa-glx \
-    libgl1-mesa-dri
+cd /usr/local/lib
+sudo ln -s libonnxruntime.so.1.15.0 libonnxruntime.so
+sudo ldconfig
 ```
 
-Then install MuJoCo and ONNX Runtime following the detailed instructions above.
+Then create the CMake config files so `find_package(onnxruntime)` works:
 
-### Python Environment Setup (for Goal Controller)
+```bash
+sudo mkdir -p /usr/local/share/cmake/onnxruntime
+```
 
-The `crl_g1_goalcontroller` package includes a Python-based controller that requires additional Python dependencies. It's recommended to use the system Python environment for simplicity.
+Create `/usr/local/share/cmake/onnxruntime/onnxruntimeConfig.cmake`:
 
-Install required Python packages:
+```cmake
+include(FindPackageHandleStandardArgs)
+
+get_filename_component(CMAKE_CURRENT_LIST_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(onnxruntime_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../../" ABSOLUTE)
+
+set(onnxruntime_INCLUDE_DIRS ${onnxruntime_INSTALL_PREFIX}/include)
+set(onnxruntime_LIBRARIES onnxruntime)
+set(onnxruntime_CXX_FLAGS "")
+
+find_library(onnxruntime_LIBRARY onnxruntime
+    PATHS "${onnxruntime_INSTALL_PREFIX}/lib"
+)
+
+add_library(onnxruntime SHARED IMPORTED)
+set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION "${onnxruntime_LIBRARY}")
+set_property(TARGET onnxruntime PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_INCLUDE_DIRS}")
+set_property(TARGET onnxruntime PROPERTY INTERFACE_COMPILE_OPTIONS "${onnxruntime_CXX_FLAGS}")
+
+find_package_handle_standard_args(onnxruntime DEFAULT_MSG onnxruntime_LIBRARY onnxruntime_INCLUDE_DIRS)
+```
+
+Create `/usr/local/share/cmake/onnxruntime/onnxruntimeConfigVersion.cmake`:
+
+```cmake
+set(PACKAGE_VERSION "1.15.0")
+
+if("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+    if("${PACKAGE_VERSION}" VERSION_EQUAL "${PACKAGE_FIND_VERSION}")
+        set(PACKAGE_VERSION_EXACT TRUE)
+    endif()
+endif()
+```
+
+### 5. Python Dependencies (for Goal Controller)
 
 ```bash
 pip3 install numpy onnxruntime
 ```
 
-**Note:** If you prefer to use a virtual environment or conda, ensure that the ROS 2 workspace can access the Python packages in that environment. Using system Python is simpler and avoids environment activation issues when launching ROS 2 nodes.
+## Building
 
-## Subpackages
-
-### Core Infrastructure
-- ```crl_ros_helper```: Helper functions for ROS integration
-- ```crl_fsm```: Finite state machine implementation
-- ```crl_fsm_msgs```: Message definitions for crl_fsm
-
-### Humanoid Common Packages
-- ```crl_humanoid_msgs```: Message definitions for crl_humanoid packages
-- ```crl_humanoid_commons```: Common interfaces and utilities
-- ```crl_humanoid_monitor```: GUI application for robot operations
-- ```crl_humanoid_simulator```: Simulation tool for software-in-the-loop testing
-- ```crl_humanoid_hardware```: Hardware interface for real robot communication
-
-### G1 Controller Packages
-- ```crl_g1_rlcontroller```: Reinforcement learning-based locomotion controller
-- ```crl_g1_mimiccontroller```: DeepMimic and DeepTrack controllers
-- ```crl_g1_goalcontroller```: Goal-directed controller with Python integration
-
-### Tron1a Controller Packages
-- ```crl_tron1a_rlcontroller```: Reinforcement learning-based locomotion controller for Limx Tron1a
-
-### Motion Capture Integration
-- ```crl_optitrack_ros```: OptiTrack motion capture system integration
-  - ```optitrack_msgs```: Message definitions for OptiTrack data
-  - ```optitrack_adaptor```: ROS adapter for OptiTrack system
-  - ```latency_checker```: Tool for measuring motion capture latency
-
-### Hardware SDKs
-- ```limxsdk-lowlevel```: Low-level SDK for Limx robotics hardware
-
-## Build
-
-The folder structure is the typical ROS 2 workspace layout:
+This repository follows the standard ROS 2 workspace layout. Clone it into the `src/` directory of a colcon workspace:
 
 ```
-src/
-└── crl-humanoid-ros/
-    ├── crl_ros_helper/
-    ├── crl_fsm/
-    ├── crl_fsm_msgs/
-    ├── crl_humanoid_msgs/
-    ├── crl_humanoid_commons/
-    ├── crl_humanoid_monitor/
-    ├── crl_humanoid_simulator/
-    ├── crl_humanoid_hardware/
-    ├── crl_g1_rlcontroller/
-    ├── crl_g1_mimiccontroller/
-    ├── crl_g1_goalcontroller_py/
-    │   ├── crl_g1_goalcontroller/
-    │   └── crl_g1_goalcontroller_python/
-    ├── crl_tron1a_rlcontroller/
-    ├── crl_optitrack_ros/
-    │   ├── optitrack_msgs/
-    │   ├── optitrack_adaptor/
-    │   └── latency_checker/
-    ├── limxsdk-lowlevel/
-    └── miscs/
+ws/                          # workspace root — build from here
+├── build/
+├── install/
+├── log/
+└── src/
+    └── crl-humanoid-ros/    # this repository
+        ├── crl_ros_helper/
+        ├── crl_fsm/
+        ├── crl_fsm_msgs/
+        ├── crl_humanoid_msgs/
+        ├── crl_humanoid_commons/
+        ├── crl_humanoid_monitor/
+        ├── crl_humanoid_simulator/
+        ├── crl_humanoid_hardware/
+        ├── crl_g1_rlcontroller/
+        ├── crl_g1_mimiccontroller/
+        ├── crl_g1_goalcontroller_py/
+        ├── crl_tron1a_rlcontroller/
+        ├── crl_optitrack_ros/
+        ├── limxsdk-lowlevel/
+        └── miscs/
 ```
 
-Start building the workspace with sourcing the ros2 environment:
+**All `colcon` commands must be run from the workspace root (`ws/`).**
+
 ```bash
+# Setup
+mkdir -p ws/src && cd ws/src
+git clone <repo-url> crl-humanoid-ros
+cd ../  # back to ws/
+
+# Source ROS 2 and build
 source /opt/ros/humble/setup.bash
-```
-
-In the workspace root, you can build the packages using colcon:
-```bash
 colcon build --cmake-args "-DCMAKE_BUILD_TYPE=Release" --symlink-install
-```
 
-You may also build specific package with its dependencies using:
-```bash
-colcon build --packages-select <package_name> --cmake-args "-DCMAKE_BUILD_TYPE=Release" --symlink-install
-```
-
-When building is complete, you can source the local setup files to overlay the newly built packages:
-
-```bash
+# Source the workspace overlay
 source install/setup.bash
 ```
 
-## Running
+To build a single package with its dependencies:
+
+```bash
+colcon build --packages-up-to <package_name> --cmake-args "-DCMAKE_BUILD_TYPE=Release" --symlink-install
+```
+
+## Usage
 
 ### Monitor GUI
-
-The monitor GUI provides visualization and control interface for the robots:
 
 ```bash
 ros2 run crl_humanoid_monitor monitor
@@ -292,67 +248,103 @@ ros2 run crl_humanoid_monitor monitor
 
 ### Unitree G1
 
-#### Simulator
-
-Launch the simulator with various controllers:
+#### Simulation
 
 ```bash
 # Simulator only
 ros2 launch crl_humanoid_simulator g1.py
 
-# RL Controller
+# RL controller (two policy variants)
 ros2 launch crl_g1_rlcontroller g1_sim.py
 ros2 launch crl_g1_rlcontroller g1_sim_v2.py
 
-# Mimic Controllers
+# DeepMimic / DeepTrack controllers
 ros2 launch crl_g1_mimiccontroller g1_sim_deepmimic.py
 ros2 launch crl_g1_mimiccontroller g1_sim_deeptrack.py
 
-# Goal Controller
+# Goal-directed controller
 ros2 launch crl_g1_goalcontroller g1_sim.py
 ```
 
 #### Hardware
 
-For running on real G1 hardware:
-
 ```bash
-# Hardware Interface
+# Hardware interface
 ros2 launch crl_humanoid_hardware g1.py
 
-# RL Controller
+# RL controller
 ros2 launch crl_g1_rlcontroller g1.py
 ros2 launch crl_g1_rlcontroller g1_v2.py
 
-# Mimic Controllers
+# DeepMimic / DeepTrack controllers
 ros2 launch crl_g1_mimiccontroller g1_deepmimic.py
 ros2 launch crl_g1_mimiccontroller g1_deeptrack.py
 
-# Goal Controller
+# Goal-directed controller
 ros2 launch crl_g1_goalcontroller g1.py
 ```
 
-### Limx Tron1a
+### LimX Tron1A
 
-#### Simulator
+#### Simulation
 
 ```bash
 # Simulator only
 ros2 launch crl_humanoid_simulator wf_tron1a.py
 
-# RL Controller
+# RL controller
 ros2 launch crl_tron1a_rlcontroller wf_tron1a_sim.py
 ```
 
 #### Hardware
 
-For running on real Tron1a hardware:
-
 ```bash
-# Hardware Interface
+# Hardware interface
 ros2 launch crl_humanoid_hardware wf_tron1a.py
 
-# RL Controller
+# RL controller
 ros2 launch crl_tron1a_rlcontroller wf_tron1a.py
 ```
+
+## Package Details
+
+### Core Infrastructure
+
+| Package | Description |
+|---|---|
+| `crl_ros_helper` | ROS 2 helper classes and utilities for node management |
+| `crl_fsm` | Compile-time finite state machine for orchestrating controller state transitions (see [crl_fsm/README.md](crl_fsm/README.md)) |
+| `crl_fsm_msgs` | Service and message definitions (`StateSwitch.srv`, `StateInfo.msg`) used by the FSM |
+
+### Humanoid Platform
+
+| Package | Description |
+|---|---|
+| `crl_humanoid_msgs` | ROS 2 message types for sensor data, control commands, and monitoring |
+| `crl_humanoid_commons` | Shared robot models, interfaces, and utility code used across all controllers |
+| `crl_humanoid_monitor` | MuJoCo-based GUI for real-time visualization and operator interaction |
+| `crl_humanoid_simulator` | MuJoCo physics simulator for software-in-the-loop testing |
+| `crl_humanoid_hardware` | Hardware interface layer supporting Unitree SDK2 and LimX SDK |
+
+### Controllers
+
+| Package | Description |
+|---|---|
+| `crl_g1_rlcontroller` | Reinforcement-learning locomotion controller for Unitree G1 |
+| `crl_g1_mimiccontroller` | DeepMimic and DeepTrack motion-imitation controllers for G1 |
+| `crl_g1_goalcontroller` | Goal-directed locomotion controller for G1 (C++ + Python) |
+| `crl_tron1a_rlcontroller` | Reinforcement-learning locomotion controller for LimX Tron1A |
+
+### External & Auxiliary
+
+| Package | Description |
+|---|---|
+| `limxsdk-lowlevel` | Low-level SDK for LimX Dynamics hardware |
+| `optitrack_msgs` | Message definitions for OptiTrack motion capture data |
+| `optitrack_adaptor` | ROS 2 adapter for the OptiTrack system (see [crl_optitrack_ros/README.md](crl_optitrack_ros/README.md)) |
+| `latency_checker` | Tool for measuring motion capture system latency |
+
+## License
+
+All CRL packages are licensed under **ETH Zurich Computational Robotics Lab**. Third-party packages (`limxsdk-lowlevel`) retain their original licenses.
 
