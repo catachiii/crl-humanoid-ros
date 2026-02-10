@@ -346,7 +346,10 @@ ros2 launch crl_tron1a_rlcontroller wf_tron1a.py
 | `optitrack_adaptor` | ROS 2 adapter for the OptiTrack system (see [crl_optitrack_ros/README.md](crl_optitrack_ros/README.md)) |
 | `latency_checker` | Tool for measuring motion capture system latency |
 
+## Credit
+We sincerely thank [Dongho Kang](https://donghokang.net/), [Zijun Hui](https://www.linkedin.com/in/zijunhui/) for their contribution to this project. 
+
 ## License
 
-All CRL packages are licensed under **ETH Zurich Computational Robotics Lab**. Third-party packages (`limxsdk-lowlevel`) retain their original licenses.
+All CRL packages are licensed under **MIT License**. Third-party packages (`limxsdk-lowlevel`) retain their original licenses.
 
