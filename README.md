@@ -1,5 +1,7 @@
 # CRL Humanoid ROS
 
+![ROS Demo](miscs/videos/ros_demo.gif)
+
 A ROS 2 framework for humanoid robot simulation and control, developed by the [Computational Robotics Lab (CRL)](https://crl.ethz.ch) at ETH Zurich. Supports the **Unitree G1** and **LimX Tron1A** platforms.
 
 ## Overview
